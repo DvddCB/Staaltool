@@ -220,6 +220,9 @@ export default function App() {
   const [pickbonLines, setPickbonLines] = useState([]);
   const [pickbonNumber, setPickbonNumber] = useState("");
 
+  const [logic4OrderNumber, setLogic4OrderNumber] = useState("");
+  const [logic4Message, setLogic4Message] = useState("");
+
   const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) =>
@@ -256,6 +259,8 @@ export default function App() {
     setSearchError("");
     setPickbonLines([]);
     setPickbonNumber("");
+    setLogic4OrderNumber("");
+    setLogic4Message("");
   }
 
   function resetTool() {
@@ -365,17 +370,25 @@ export default function App() {
 
     setPickbonLines((currentLines) => {
       const existingIndex = currentLines.findIndex((line) => line.articleCode === articleCodeValue);
+      const scannedAt = new Date().toLocaleString("nl-NL");
 
       if (existingIndex >= 0) {
-        return currentLines.map((line, index) =>
-          index === existingIndex
-            ? {
-                ...line,
-                quantity: line.quantity + 1,
-                scannedAt: new Date().toLocaleString("nl-NL")
-              }
-            : line
-        );
+        return currentLines.map((line, index) => {
+          if (index !== existingIndex) return line;
+
+          const currentScanned = Number(line.scannedQuantity || 0);
+          const orderedQuantity = Number(line.quantity || 1);
+          const nextScanned = Math.min(currentScanned + 1, orderedQuantity);
+          const hasScannedQuantity = line.scannedQuantity !== undefined;
+
+          return {
+            ...line,
+            quantity: hasScannedQuantity ? orderedQuantity : line.quantity + 1,
+            scannedQuantity: hasScannedQuantity ? nextScanned : undefined,
+            processed: hasScannedQuantity ? nextScanned >= orderedQuantity : line.processed,
+            scannedAt
+          };
+        });
       }
 
       return [
@@ -391,7 +404,7 @@ export default function App() {
           colorName: parsed.colorName,
           quantity: 1,
           processed: false,
-          scannedAt: new Date().toLocaleString("nl-NL")
+          scannedAt
         }
       ];
     });
@@ -405,6 +418,103 @@ export default function App() {
     setSearchError("");
     return true;
   }
+
+  function addOrderRowsToPickbon(orderNumber, rows) {
+    setPickbonNumber(orderNumber || "Logic4 order");
+    setPickbonLines(
+      rows.map((row, index) => ({
+        id: "logic4-" + Date.now() + "-" + index,
+        articleCode: row.articleCode,
+        description: row.description,
+        type: row.type || "",
+        size: row.size || "",
+        length: row.length || "",
+        colorCode: row.colorCode || "",
+        colorName: row.colorName || "",
+        quantity: row.quantity,
+        scannedQuantity: 0,
+        processed: false,
+        scannedAt: "-"
+      }))
+    );
+  }
+
+  function loadMockLogic4Order() {
+    const orderNumber = logic4OrderNumber.trim() || "L4-TEST-001";
+
+    const mockRows = [
+      {
+        articleCode: "24010110096300092",
+        description: "HEA 100 - 3000 mm - 2. Bruin",
+        type: "HEA",
+        size: "100",
+        length: 3000,
+        colorCode: "2",
+        colorName: "Bruin",
+        quantity: 2
+      },
+      {
+        articleCode: "2402021001003500911",
+        description: "HEB 100 - 3500 mm - 11. Rood",
+        type: "HEB",
+        size: "100",
+        length: 3500,
+        colorCode: "11",
+        colorName: "Rood",
+        quantity: 1
+      },
+      {
+        articleCode: "240402100504000914",
+        description: "IPE 100 - 4000 mm - 14. Zwart",
+        type: "IPE",
+        size: "100",
+        length: 4000,
+        colorCode: "14",
+        colorName: "Zwart",
+        quantity: 3
+      }
+    ];
+
+    addOrderRowsToPickbon(orderNumber, mockRows);
+    setLogic4Message("Testorder geladen. Scan de artikelen om de pickbon te verwerken.");
+    setSearchError("");
+  }
+
+  async function loadLogic4Order() {
+    const orderNumber = logic4OrderNumber.trim();
+
+    if (!orderNumber) {
+      setSearchError("Vul eerst een Logic4 ordernummer in.");
+      return;
+    }
+
+    try {
+      setLogic4Message("Order ophalen...");
+
+      const response = await fetch(`/api/logic4-order?orderNumber=${encodeURIComponent(orderNumber)}`);
+
+      if (!response.ok) {
+        throw new Error("Order kon niet worden opgehaald.");
+      }
+
+      const data = await response.json();
+
+      if (!data.rows || data.rows.length === 0) {
+        setSearchError("Geen orderregels gevonden voor deze Logic4 order.");
+        setLogic4Message("");
+        return;
+      }
+
+      addOrderRowsToPickbon(data.orderNumber || orderNumber, data.rows);
+      setLogic4Message("Logic4 order geladen.");
+      setSearchError("");
+    } catch (err) {
+      setLogic4Message("");
+      setSearchError("Logic4 order ophalen lukt nog niet. Gebruik nu de testorder of sluit later de API aan.");
+    }
+  }
+
+
 
   function handleManualSearch(event) {
     event.preventDefault();
@@ -656,6 +766,29 @@ export default function App() {
                 <p style={styles.label}>Artikelzoeker / pickbon</p>
                 <h2 style={styles.bigTitle}>Scan bestellingen en verwerk pickbon</h2>
 
+                <div style={styles.logic4Box}>
+                  <p style={styles.label}>Logic4 order ophalen</p>
+
+                  <label style={styles.inputLabel}>Logic4 ordernummer</label>
+                  <input
+                    style={styles.lengthInput}
+                    value={logic4OrderNumber}
+                    onChange={(e) => setLogic4OrderNumber(e.target.value)}
+                    placeholder="Bijv. 12345"
+                  />
+
+                  <div style={styles.logic4Actions}>
+                    <button style={styles.secondaryButton} type="button" onClick={loadLogic4Order}>
+                      Order ophalen
+                    </button>
+                    <button style={styles.smallDarkButton} type="button" onClick={loadMockLogic4Order}>
+                      Testorder laden
+                    </button>
+                  </div>
+
+                  {logic4Message && <div style={styles.logic4Message}>{logic4Message}</div>}
+                </div>
+
                 <label style={styles.inputLabel}>Pickbonnummer / ordernummer</label>
                 <input
                   style={styles.lengthInput}
@@ -714,6 +847,11 @@ export default function App() {
                         <div style={styles.pickbonLineMain}>
                           <strong>{line.description}</strong>
                           <span style={styles.pickbonCode}>{line.articleCode}</span>
+                          {line.scannedQuantity !== undefined && (
+                            <span style={styles.pickbonMeta}>
+                              Gescand: {line.scannedQuantity} / {line.quantity}
+                            </span>
+                          )}
                           <span style={styles.pickbonMeta}>Laatst gescand: {line.scannedAt}</span>
                         </div>
 
@@ -1519,5 +1657,25 @@ const styles = {
     padding: "10px 12px",
     fontWeight: 800,
     cursor: "pointer"
+  },
+  logic4Box: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16
+  },
+  logic4Actions: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 8
+  },
+  logic4Message: {
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+    fontWeight: 700
   }
 };
