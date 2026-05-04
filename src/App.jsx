@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
+import { BrowserMultiFormatReader } from "@zxing/browser";
 
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -161,6 +162,8 @@ function BarcodeView({ value }) {
 }
 
 export default function App() {
+  const controlsRef = useRef(null);
+
   const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -174,6 +177,10 @@ export default function App() {
   const [colorCode, setColorCode] = useState("");
   const [colorName, setColorName] = useState("");
   const [query, setQuery] = useState("");
+
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState("");
+  const [scanError, setScanError] = useState("");
 
   const types = Object.keys(profielData);
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
@@ -208,6 +215,7 @@ export default function App() {
   }
 
   function logout() {
+    stopScanner();
     setLoggedIn(false);
     setUsername("");
     setPassword("");
@@ -275,6 +283,39 @@ export default function App() {
     }
   }
 
+  async function startScanner() {
+    setScanResult("");
+    setScanError("");
+    setScanning(true);
+
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const controls = await reader.decodeFromVideoDevice(
+        undefined,
+        "video-preview",
+        (result) => {
+          if (result) {
+            setScanResult(result.getText());
+            stopScanner();
+          }
+        }
+      );
+
+      controlsRef.current = controls;
+    } catch (err) {
+      setScanning(false);
+      setScanError("Camera kon niet worden gestart. Controleer cameratoegang en probeer opnieuw.");
+    }
+  }
+
+  function stopScanner() {
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
+    }
+    setScanning(false);
+  }
+
   if (!loggedIn) {
     return (
       <div style={styles.loginPage}>
@@ -320,10 +361,36 @@ export default function App() {
             </div>
           </div>
 
-          <button style={styles.logoutButton} onClick={logout}>
-            Uitloggen
-          </button>
+          <div style={styles.headerActions}>
+            <button style={styles.scanButton} onClick={startScanner}>
+              Scan barcode
+            </button>
+            <button style={styles.logoutButton} onClick={logout}>
+              Uitloggen
+            </button>
+          </div>
         </header>
+
+        {scanning && (
+          <div style={styles.scannerPanel}>
+            <video id="video-preview" style={styles.videoPreview}></video>
+            <button style={styles.stopButton} onClick={stopScanner}>
+              Scanner stoppen
+            </button>
+          </div>
+        )}
+
+        {scanResult && (
+          <div style={styles.scanResult}>
+            Gescande barcode: <strong>{scanResult}</strong>
+          </div>
+        )}
+
+        {scanError && (
+          <div style={styles.scanError}>
+            {scanError}
+          </div>
+        )}
 
         <div style={styles.steps}>
           <div style={step === "types" ? styles.activeStep : styles.step}>1. Soort</div>
@@ -619,6 +686,20 @@ const styles = {
     color: "#64748b",
     fontSize: 13
   },
+  headerActions: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  scanButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#1234aa",
+    color: "white",
+    padding: "10px 14px",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
   logoutButton: {
     border: "none",
     borderRadius: 12,
@@ -627,6 +708,46 @@ const styles = {
     padding: "10px 14px",
     fontWeight: 700,
     cursor: "pointer"
+  },
+
+  scannerPanel: {
+    background: "#0f172a",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  videoPreview: {
+    width: "100%",
+    maxHeight: 360,
+    borderRadius: 12,
+    background: "black"
+  },
+  stopButton: {
+    marginTop: 10,
+    width: "100%",
+    border: "none",
+    borderRadius: 12,
+    background: "#ff7a00",
+    color: "white",
+    padding: "12px 14px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  scanResult: {
+    background: "#e0f2fe",
+    color: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    overflowWrap: "anywhere"
+  },
+  scanError: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12
   },
 
   steps: {
