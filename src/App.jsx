@@ -495,14 +495,8 @@ export default function App() {
     try {
       const reader = new BrowserMultiFormatReader();
 
-      const controls = await reader.decodeFromConstraints(
-        {
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
-        },
+      const controls = await reader.decodeFromVideoDevice(
+        undefined,
         "video-preview",
         (result) => {
           if (!result) return;
@@ -539,7 +533,7 @@ export default function App() {
       console.error(err);
       scanLockRef.current = false;
       setScanning(false);
-      setScanError("Camera kon niet worden gestart. Gebruik Chrome en geef cameratoegang.");
+      setScanError("Camera kon niet worden gestart. Controleer cameratoegang en probeer opnieuw.");
     }
   }
 
