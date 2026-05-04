@@ -6,25 +6,9 @@ const profielData = {
   IPE: [100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400],
   UNP: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 330],
   Koker: [],
-  "Hoeklijn gelijkzijdig": [
-    "20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5",
-    "60x60x6", "70x70x7", "80x80x8", "100x100x10"
-  ],
-  "Hoeklijn ongelijkzijdig": [
-    "40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"
-  ],
-  Stripstaal: [
-    "40x4", "40x5", "40x6", "40x8", "40x10",
-    "50x4", "50x5", "50x6", "50x8", "50x10",
-    "60x5", "60x6", "60x8", "60x10",
-    "80x6", "80x8", "80x10", "80x12",
-    "100x8", "100x10", "100x12", "100x15", "100x20",
-    "120x10", "120x12", "120x15", "120x20",
-    "150x10", "150x12", "150x15", "150x20",
-    "200x10", "200x15", "200x20", "200x25",
-    "250x20", "250x25", "250x30",
-    "300x20", "300x25", "300x30"
-  ]
+  "Hoeklijn gelijkzijdig": ["20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5", "60x60x6", "70x70x7", "80x80x8", "100x100x10"],
+  "Hoeklijn ongelijkzijdig": ["40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"],
+  Stripstaal: ["40x4", "40x5", "40x6", "40x8", "40x10", "50x4", "50x5", "50x6", "50x8", "50x10", "60x5", "60x6", "60x8", "60x10", "80x6", "80x8", "80x10", "80x12", "100x8", "100x10", "100x12", "100x15", "100x20", "120x10", "120x12", "120x15", "120x20", "150x10", "150x12", "150x15", "150x20", "200x10", "200x15", "200x20", "200x25", "250x20", "250x25", "250x30", "300x20", "300x25", "300x30"]
 };
 
 const kokerData = {
@@ -165,7 +149,7 @@ function BarcodeView({ value }) {
             key={index}
             style={{
               width: bar.width,
-              height: 88,
+              height: 82,
               background: bar.space ? "transparent" : "black"
             }}
           />
@@ -438,7 +422,7 @@ export default function App() {
 
               {!lengthIsValid && (
                 <div style={styles.warning}>
-                  Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm worden ingevoerd.
+                  Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm.
                 </div>
               )}
 
@@ -527,57 +511,63 @@ export default function App() {
 
 const styles = {
   loginPage: {
-    height: "100vh",
+    minHeight: "100vh",
+    minHeight: "100svh",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
     background: "linear-gradient(135deg, #1e3c72, #2a5298)",
-    fontFamily: "Arial, sans-serif"
+    fontFamily: "Arial, sans-serif",
+    padding: 16,
+    boxSizing: "border-box"
   },
   loginCard: {
     background: "#fff",
-    padding: "40px",
-    borderRadius: "16px",
-    width: "330px",
+    padding: 32,
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 340,
     textAlign: "center",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.25)"
+    boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+    boxSizing: "border-box"
   },
   loginLogo: {
-    width: "180px",
-    marginBottom: "22px"
+    width: "70%",
+    maxWidth: 180,
+    marginBottom: 20
   },
   loginTitle: {
-    marginBottom: "24px",
+    marginBottom: 22,
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
     fontWeight: "700",
-    letterSpacing: "6px",
-    fontSize: "34px",
+    letterSpacing: 5,
+    fontSize: 32,
     color: "#ff7a00",
     textTransform: "uppercase"
   },
   loginInput: {
     width: "100%",
     boxSizing: "border-box",
-    padding: "12px",
-    marginBottom: "12px",
-    borderRadius: "8px",
+    padding: 13,
+    marginBottom: 12,
+    borderRadius: 8,
     border: "1px solid #ccc",
-    fontSize: "14px"
+    fontSize: 16
   },
   loginButton: {
     width: "100%",
-    padding: "12px",
+    padding: 13,
     background: "#ff7a00",
     color: "#fff",
     border: "none",
-    borderRadius: "8px",
+    borderRadius: 8,
     cursor: "pointer",
     fontWeight: "700",
-    fontSize: "15px"
+    fontSize: 16
   },
   loginError: {
     color: "red",
-    marginTop: "12px"
+    marginTop: 12
   },
 
   appPage: {
@@ -585,41 +575,49 @@ const styles = {
     background: "linear-gradient(135deg, #e8f0ff 0%, #f8fafc 55%, #fff3e7 100%)",
     color: "#0f172a",
     fontFamily: "Arial, sans-serif",
-    padding: 20
+    padding: 12,
+    boxSizing: "border-box"
   },
   appShell: {
     maxWidth: 1180,
-    margin: "0 auto"
+    margin: "0 auto",
+    padding: "6px",
+    boxSizing: "border-box"
   },
   header: {
     display: "flex",
+    flexWrap: "wrap",
     justifyContent: "space-between",
     alignItems: "center",
     background: "white",
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    padding: 14,
+    gap: 10,
     boxShadow: "0 10px 30px rgba(15,23,42,0.10)",
-    marginBottom: 18
+    marginBottom: 14
   },
   brandRow: {
     display: "flex",
     alignItems: "center",
-    gap: 14
+    gap: 12,
+    minWidth: 0
   },
   headerLogo: {
-    width: 72,
-    height: "auto"
+    width: 58,
+    height: "auto",
+    flexShrink: 0
   },
   headerTitle: {
     margin: 0,
     color: "#1234aa",
-    fontSize: 30,
+    fontSize: 26,
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
     letterSpacing: 1
   },
   headerSubtitle: {
-    margin: "4px 0 0",
-    color: "#64748b"
+    margin: "3px 0 0",
+    color: "#64748b",
+    fontSize: 13
   },
   logoutButton: {
     border: "none",
@@ -633,26 +631,26 @@ const styles = {
 
   steps: {
     display: "grid",
-    gridTemplateColumns: "repeat(5, 1fr)",
-    gap: 8,
-    marginBottom: 14
+    gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))",
+    gap: 6,
+    marginBottom: 12
   },
   step: {
     background: "rgba(255,255,255,0.78)",
     color: "#475569",
-    padding: 11,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700
   },
   activeStep: {
     background: "#1234aa",
     color: "white",
-    padding: 11,
-    borderRadius: 12,
+    padding: 10,
+    borderRadius: 10,
     textAlign: "center",
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 700
   },
   backButton: {
@@ -661,30 +659,30 @@ const styles = {
     borderRadius: 12,
     padding: "10px 14px",
     cursor: "pointer",
-    marginBottom: 16
+    marginBottom: 12
   },
 
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: 12
+    gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+    gap: 10
   },
   cardButton: {
-    minHeight: 120,
+    minHeight: 104,
     background: "white",
     border: "none",
-    borderRadius: 16,
+    borderRadius: 15,
     boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: 18,
+    padding: 12,
     textAlign: "center"
   },
   cardTitle: {
-    fontSize: 20,
+    fontSize: 19,
     color: "#1234aa",
     fontWeight: 900,
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
@@ -692,22 +690,22 @@ const styles = {
     wordBreak: "break-word"
   },
   cardText: {
-    marginTop: 6,
+    marginTop: 5,
     color: "#64748b",
-    fontSize: 13
+    fontSize: 12
   },
 
   panel: {
     background: "white",
-    borderRadius: 22,
-    padding: 24,
+    borderRadius: 18,
+    padding: 18,
     boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
-    marginBottom: 16
+    marginBottom: 12
   },
   sectionTitle: {
     margin: 0,
     color: "#1234aa",
-    fontSize: 28
+    fontSize: 24
   },
   muted: {
     color: "#64748b"
@@ -723,21 +721,21 @@ const styles = {
   },
 
   twoColumn: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-    gap: 18
+    display: "flex",
+    flexDirection: "column",
+    gap: 12
   },
   label: {
     color: "#64748b",
-    fontSize: 13,
+    fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: 1,
     fontWeight: 800
   },
   bigTitle: {
     color: "#1234aa",
-    fontSize: 40,
-    margin: "8px 0 20px",
+    fontSize: 30,
+    margin: "8px 0 18px",
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
   },
   inputLabel: {
@@ -769,7 +767,8 @@ const styles = {
     color: "white",
     padding: "14px 16px",
     fontWeight: 800,
-    cursor: "pointer"
+    cursor: "pointer",
+    fontSize: 16
   },
   disabledButton: {
     marginTop: 14,
@@ -780,28 +779,29 @@ const styles = {
     color: "#64748b",
     padding: "14px 16px",
     fontWeight: 800,
-    cursor: "not-allowed"
+    cursor: "not-allowed",
+    fontSize: 16
   },
 
   colorButton: {
-    minHeight: 120,
-    borderRadius: 16,
+    minHeight: 104,
+    borderRadius: 15,
     boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
     cursor: "pointer",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    padding: 18,
+    padding: 12,
     textAlign: "center"
   },
   colorCode: {
-    fontSize: 13,
+    fontSize: 12,
     opacity: 0.85,
     fontWeight: 800
   },
   colorName: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: 900,
     marginTop: 4,
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
@@ -810,34 +810,34 @@ const styles = {
   },
 
   summaryLine: {
-    fontSize: 18
+    fontSize: 17
   },
   resultPanel: {
     background: "#1234aa",
     color: "white",
-    borderRadius: 22,
-    padding: 24,
+    borderRadius: 18,
+    padding: 18,
     boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
   },
   resultTitle: {
     marginTop: 0,
-    fontSize: 28,
+    fontSize: 24,
     color: "white"
   },
   resultLabel: {
     color: "#dbeafe",
-    fontSize: 13,
+    fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: 1,
     fontWeight: 800,
-    marginTop: 18
+    marginTop: 16
   },
   articleCode: {
     background: "rgba(255,255,255,0.14)",
-    padding: 16,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 14,
     fontFamily: "monospace",
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 900,
     overflowWrap: "anywhere"
   },
@@ -850,11 +850,12 @@ const styles = {
   barcodeOuter: {
     background: "white",
     color: "black",
-    borderRadius: 16,
-    padding: 14
+    borderRadius: 14,
+    padding: 12,
+    overflow: "hidden"
   },
   barcodeBars: {
-    height: 88,
+    height: 82,
     display: "flex",
     justifyContent: "center",
     alignItems: "flex-end",
@@ -865,7 +866,8 @@ const styles = {
     marginTop: 10,
     textAlign: "center",
     fontFamily: "monospace",
-    fontSize: 18,
-    letterSpacing: 1
+    fontSize: 14,
+    letterSpacing: 1,
+    overflowWrap: "anywhere"
   }
 };
