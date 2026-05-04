@@ -78,8 +78,8 @@ const styles = {
     boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
   },
   logo: {
-    width: "110px",
-    marginBottom: "15px",
+    width: "160px",
+    marginBottom: "20px",
   },
 
   // 🔥 LOGIN STIJL (logo look)
