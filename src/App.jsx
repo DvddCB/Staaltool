@@ -1,5 +1,6 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
+import JsBarcode from "jsbarcode";
 
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -96,8 +97,7 @@ function getArticleCode(type, size, lengthMm, colorCode) {
   const length = Number(lengthMm);
   if (!type || !size || !length || length <= 0 || !colorCode) return "";
 
-  if (!baseMaps[type]) return "";
-  const base = baseMaps[type][String(size)];
+  const base = baseMaps[type]?.[String(size)];
   if (!base) return "";
 
   const code = base + String(length) + "9" + String(colorCode);
@@ -108,15 +108,24 @@ function getArticleCode(type, size, lengthMm, colorCode) {
   return code;
 }
 
+function findArticleByBase(base) {
+  for (const typeName of Object.keys(baseMaps)) {
+    for (const sizeName of Object.keys(baseMaps[typeName])) {
+      if (baseMaps[typeName][sizeName] === base) {
+        return { type: typeName, size: sizeName };
+      }
+    }
+  }
+  return null;
+}
+
 function parseArticleCode(rawCode) {
   const cleanCode = String(rawCode || "").replace(/\D/g, "");
   if (!cleanCode) return null;
 
-  const possibleColorCodes = kleurData
-    .map((color) => color.code)
-    .sort((a, b) => b.length - a.length);
+  const colorCodes = kleurData.map((c) => c.code).sort((a, b) => b.length - a.length);
 
-  for (const colorCode of possibleColorCodes) {
+  for (const colorCode of colorCodes) {
     if (!cleanCode.endsWith(colorCode)) continue;
 
     const withoutColor = cleanCode.slice(0, -colorCode.length);
@@ -125,28 +134,24 @@ function parseArticleCode(rawCode) {
     const withoutSeparator = withoutColor.slice(0, -1);
 
     for (let lengthDigits = 5; lengthDigits >= 4; lengthDigits--) {
-      if (withoutSeparator.length <= lengthDigits) continue;
-
       const lengthText = withoutSeparator.slice(-lengthDigits);
       const length = Number(lengthText);
       const base = withoutSeparator.slice(0, -lengthDigits);
 
-      const lengthIsValid = length >= 1000 && length <= 20000 && length % 50 === 0;
-      if (!lengthIsValid) continue;
+      if (length < 1000 || length > 20000 || length % 50 !== 0) continue;
 
       const found = findArticleByBase(base);
       if (!found) continue;
 
-      const color = kleurData.find((item) => item.code === colorCode);
+      const color = kleurData.find((c) => c.code === colorCode);
 
       return {
-        code: cleanCode,
-        base,
         type: found.type,
         size: found.size,
         length,
         colorCode,
-        colorName: color?.naam || ""
+        colorName: color?.naam || "",
+        code: cleanCode
       };
     }
   }
@@ -154,54 +159,34 @@ function parseArticleCode(rawCode) {
   return null;
 }
 
-function findArticleByBase(base) {
-  for (const typeName of Object.keys(baseMaps)) {
-    for (const sizeName of Object.keys(baseMaps[typeName])) {
-      if (baseMaps[typeName][sizeName] === base) {
-        return {
-          type: typeName,
-          size: sizeName
-        };
-      }
-    }
-  }
-
-  return null;
-}
-
 function BarcodeView({ value }) {
-  const bars = useMemo(() => {
-    const text = String(value || "");
-    const list = [];
+  const svgRef = useRef(null);
 
-    for (let i = 0; i < text.length; i++) {
-      const n = text.charCodeAt(i);
-      list.push({ width: 2 + (n % 3), space: false });
-      list.push({ width: 1 + (n % 2), space: true });
-      list.push({ width: 1 + ((n + i) % 4), space: false });
-      list.push({ width: 2, space: true });
+  useEffect(() => {
+    if (!value || !svgRef.current) return;
+
+    try {
+      JsBarcode(svgRef.current, String(value), {
+        format: "CODE128",
+        width: 2,
+        height: 82,
+        displayValue: true,
+        font: "monospace",
+        fontSize: 16,
+        margin: 12,
+        background: "#ffffff",
+        lineColor: "#000000"
+      });
+    } catch (err) {
+      console.error("Barcode kon niet worden gemaakt:", err);
     }
-
-    return list;
   }, [value]);
 
   if (!value) return null;
 
   return (
     <div style={styles.barcodeOuter}>
-      <div style={styles.barcodeBars}>
-        {bars.map((bar, index) => (
-          <div
-            key={index}
-            style={{
-              width: bar.width,
-              height: 82,
-              background: bar.space ? "transparent" : "black"
-            }}
-          />
-        ))}
-      </div>
-      <div style={styles.barcodeText}>{value}</div>
+      <svg ref={svgRef} style={styles.barcodeSvg}></svg>
     </div>
   );
 }
@@ -254,7 +239,7 @@ export default function App() {
   }
 
   function resetTool() {
-    setStep("types");
+    setStep(selectedModule === "Artikelzoeker" ? "search" : "types");
     setType("");
     setSize("");
     setBaseSize("");
@@ -289,12 +274,24 @@ export default function App() {
   function goToMenu() {
     stopScanner();
     setSelectedModule("");
+    setStep("types");
     resetTool();
   }
 
   function chooseModule(moduleName) {
     setSelectedModule(moduleName);
-    resetTool();
+    setStep(moduleName === "Artikelzoeker" ? "search" : "types");
+    setType("");
+    setSize("");
+    setBaseSize("");
+    setLengthMm(3000);
+    setColorCode("");
+    setColorName("");
+    setQuery("");
+    setScanResult("");
+    setScanError("");
+    setManualCode("");
+    setSearchError("");
   }
 
   function chooseType(nextType) {
@@ -361,14 +358,12 @@ export default function App() {
   }
 
   function goBack() {
-    if (step === "result") {
-      if (selectedModule === "Artikelzoeker") {
-        setStep("search");
-        setColorCode("");
-        setColorName("");
-        return;
-      }
+    if (step === "result" && selectedModule === "Artikelzoeker") {
+      setStep("search");
+      return;
+    }
 
+    if (step === "result") {
       setStep("colors");
       setColorCode("");
       setColorName("");
@@ -398,6 +393,7 @@ export default function App() {
 
     try {
       const reader = new BrowserMultiFormatReader();
+
       const controls = await reader.decodeFromVideoDevice(
         undefined,
         "video-preview",
@@ -480,8 +476,6 @@ export default function App() {
     );
   }
 
-  const activeStep = selectedModule === "Artikelzoeker" && step === "types" ? "search" : step;
-
   return (
     <div style={styles.appPage}>
       <div style={styles.appShell}>
@@ -495,24 +489,16 @@ export default function App() {
           </div>
 
           <div style={styles.headerActions}>
-            <button style={styles.menuButtonSmall} onClick={goToMenu}>
-              Menu
-            </button>
-            <button style={styles.scanButton} onClick={startScanner}>
-              Scan barcode
-            </button>
-            <button style={styles.logoutButton} onClick={logout}>
-              Uitloggen
-            </button>
+            <button style={styles.menuButtonSmall} onClick={goToMenu}>Menu</button>
+            <button style={styles.scanButton} onClick={startScanner}>Scan barcode</button>
+            <button style={styles.logoutButton} onClick={logout}>Uitloggen</button>
           </div>
         </header>
 
         {scanning && (
           <div style={styles.scannerPanel}>
             <video id="video-preview" style={styles.videoPreview}></video>
-            <button style={styles.stopButton} onClick={stopScanner}>
-              Scanner stoppen
-            </button>
+            <button style={styles.stopButton} onClick={stopScanner}>Scanner stoppen</button>
           </div>
         )}
 
@@ -565,11 +551,11 @@ export default function App() {
         ) : (
           <>
             <div style={styles.steps}>
-              <div style={activeStep === "types" ? styles.activeStep : styles.step}>1. Soort</div>
-              <div style={activeStep === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
-              <div style={activeStep === "thickness" ? styles.activeStep : styles.step}>3. Dikte</div>
-              <div style={activeStep === "length" ? styles.activeStep : styles.step}>4. Lengte</div>
-              <div style={activeStep === "colors" || activeStep === "result" ? styles.activeStep : styles.step}>5. Kleur</div>
+              <div style={step === "types" ? styles.activeStep : styles.step}>1. Soort</div>
+              <div style={step === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
+              <div style={step === "thickness" ? styles.activeStep : styles.step}>3. Dikte</div>
+              <div style={step === "length" ? styles.activeStep : styles.step}>4. Lengte</div>
+              <div style={step === "colors" || step === "result" ? styles.activeStep : styles.step}>5. Kleur</div>
             </div>
 
             {step !== "types" && (
@@ -604,9 +590,7 @@ export default function App() {
                 <div style={styles.grid}>
                   {filteredSizes.map((item) => (
                     <button key={item} style={styles.cardButton} onClick={() => chooseSize(item)}>
-                      <span style={styles.cardTitle}>
-                        {type} {item}
-                      </span>
+                      <span style={styles.cardTitle}>{type} {item}</span>
                       <span style={styles.cardText}>
                         {type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}
                       </span>
@@ -625,11 +609,7 @@ export default function App() {
 
                 <div style={styles.grid}>
                   {kokerData[baseSize].map((thickness) => (
-                    <button
-                      key={thickness}
-                      style={styles.cardButton}
-                      onClick={() => chooseThickness(thickness)}
-                    >
+                    <button key={thickness} style={styles.cardButton} onClick={() => chooseThickness(thickness)}>
                       <span style={styles.cardTitle}>{baseSize}x{thickness}</span>
                       <span style={styles.cardText}>{thickness} mm dikte</span>
                     </button>
@@ -708,7 +688,7 @@ export default function App() {
                   <p style={styles.summaryLine}>Lengte: {lengthMm} mm</p>
                   <p style={styles.summaryLine}>Kleur: {colorCode}. {colorName}</p>
 
-                  <button style={styles.primaryButton} onClick={selectedModule === "Artikelzoeker" ? resetTool : resetTool}>
+                  <button style={styles.primaryButton} onClick={resetTool}>
                     {selectedModule === "Artikelzoeker" ? "Nieuwe zoekopdracht" : "Nieuwe code maken"}
                   </button>
                 </div>
@@ -798,7 +778,6 @@ const styles = {
     color: "red",
     marginTop: 12
   },
-
   menuPage: {
     minHeight: "100vh",
     minHeight: "100svh",
@@ -876,7 +855,6 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer"
   },
-
   appPage: {
     minHeight: "100vh",
     background: "linear-gradient(135deg, #e8f0ff 0%, #f8fafc 55%, #fff3e7 100%)",
@@ -958,7 +936,6 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer"
   },
-
   scannerPanel: {
     background: "#0f172a",
     borderRadius: 16,
@@ -998,7 +975,6 @@ const styles = {
     padding: 12,
     marginBottom: 12
   },
-
   steps: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))",
@@ -1031,7 +1007,6 @@ const styles = {
     cursor: "pointer",
     marginBottom: 12
   },
-
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
@@ -1064,7 +1039,6 @@ const styles = {
     color: "#64748b",
     fontSize: 12
   },
-
   panel: {
     background: "white",
     borderRadius: 18,
@@ -1089,7 +1063,6 @@ const styles = {
     fontSize: 16,
     marginTop: 12
   },
-
   twoColumn: {
     display: "flex",
     flexDirection: "column",
@@ -1164,7 +1137,6 @@ const styles = {
     cursor: "not-allowed",
     fontSize: 16
   },
-
   colorButton: {
     minHeight: 104,
     borderRadius: 15,
@@ -1190,7 +1162,6 @@ const styles = {
     lineHeight: 1.1,
     wordBreak: "break-word"
   },
-
   summaryLine: {
     fontSize: 17
   },
@@ -1236,20 +1207,10 @@ const styles = {
     padding: 12,
     overflow: "hidden"
   },
-  barcodeBars: {
-    height: 82,
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "flex-end",
-    gap: 1,
-    overflow: "hidden"
-  },
-  barcodeText: {
-    marginTop: 10,
-    textAlign: "center",
-    fontFamily: "monospace",
-    fontSize: 14,
-    letterSpacing: 1,
-    overflowWrap: "anywhere"
+  barcodeSvg: {
+    width: "100%",
+    maxWidth: "100%",
+    height: "auto",
+    display: "block"
   }
 };
