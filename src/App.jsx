@@ -95,17 +95,12 @@ const baseMaps = {
 
 function getArticleCode(type, size, lengthMm, colorCode) {
   const length = Number(lengthMm);
-  if (!type || !size || !length || length <= 0 || !colorCode) return "";
+  if (!type || !size || !length || !colorCode) return "";
 
   const base = baseMaps[type]?.[String(size)];
   if (!base) return "";
 
-  const code = base + String(length) + "9" + String(colorCode);
-  const pos9 = code.length - String(colorCode).length - 1;
-  const lengteEinde = code.slice(pos9 - 2, pos9);
-
-  if (!(lengteEinde === "00" || lengteEinde === "50")) return "";
-  return code;
+  return base + String(length) + "9" + String(colorCode);
 }
 
 function findArticleByBase(base) {
@@ -134,6 +129,8 @@ function parseArticleCode(rawCode) {
     const withoutSeparator = withoutColor.slice(0, -1);
 
     for (let lengthDigits = 5; lengthDigits >= 4; lengthDigits--) {
+      if (withoutSeparator.length <= lengthDigits) continue;
+
       const lengthText = withoutSeparator.slice(-lengthDigits);
       const length = Number(lengthText);
       const base = withoutSeparator.slice(0, -lengthDigits);
@@ -166,14 +163,16 @@ function BarcodeView({ value }) {
     if (!value || !svgRef.current) return;
 
     try {
+      svgRef.current.innerHTML = "";
+
       JsBarcode(svgRef.current, String(value), {
         format: "CODE128",
         width: 2,
-        height: 82,
+        height: 90,
         displayValue: true,
         font: "monospace",
         fontSize: 16,
-        margin: 12,
+        margin: 14,
         background: "#ffffff",
         lineColor: "#000000"
       });
@@ -238,8 +237,8 @@ export default function App() {
     }
   }
 
-  function resetTool() {
-    setStep(selectedModule === "Artikelzoeker" ? "search" : "types");
+  function clearTool(nextStep = selectedModule === "Artikelzoeker" ? "search" : "types") {
+    setStep(nextStep);
     setType("");
     setSize("");
     setBaseSize("");
@@ -251,6 +250,10 @@ export default function App() {
     setScanError("");
     setManualCode("");
     setSearchError("");
+  }
+
+  function resetTool() {
+    clearTool(selectedModule === "Artikelzoeker" ? "search" : "types");
   }
 
   function stopScanner() {
@@ -268,30 +271,18 @@ export default function App() {
     setUsername("");
     setPassword("");
     setError("");
-    resetTool();
+    clearTool("types");
   }
 
   function goToMenu() {
     stopScanner();
     setSelectedModule("");
-    setStep("types");
-    resetTool();
+    clearTool("types");
   }
 
   function chooseModule(moduleName) {
     setSelectedModule(moduleName);
-    setStep(moduleName === "Artikelzoeker" ? "search" : "types");
-    setType("");
-    setSize("");
-    setBaseSize("");
-    setLengthMm(3000);
-    setColorCode("");
-    setColorName("");
-    setQuery("");
-    setScanResult("");
-    setScanError("");
-    setManualCode("");
-    setSearchError("");
+    clearTool(moduleName === "Artikelzoeker" ? "search" : "types");
   }
 
   function chooseType(nextType) {
@@ -394,15 +385,31 @@ export default function App() {
     try {
       const reader = new BrowserMultiFormatReader();
 
-      const controls = await reader.decodeFromVideoDevice(
-        undefined,
+      const controls = await reader.decodeFromConstraints(
+        {
+          video: {
+            facingMode: "environment",
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        },
         "video-preview",
         (result) => {
           if (result) {
             const text = result.getText();
             setScanResult(text);
-            fillArticleFromCode(text);
-            stopScanner();
+
+            const found = fillArticleFromCode(text);
+            if (!found) {
+              setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
+            }
+
+            if (controlsRef.current) {
+              controlsRef.current.stop();
+              controlsRef.current = null;
+            }
+
+            setScanning(false);
           }
         }
       );
@@ -533,7 +540,7 @@ export default function App() {
                     style={styles.lengthInput}
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="Bijv. 240101100963000911"
+                    placeholder="Bijv. 24010110096300092"
                     inputMode="numeric"
                   />
 
@@ -720,7 +727,6 @@ export default function App() {
 
 const styles = {
   loginPage: {
-    minHeight: "100vh",
     minHeight: "100svh",
     display: "flex",
     justifyContent: "center",
@@ -779,7 +785,6 @@ const styles = {
     marginTop: 12
   },
   menuPage: {
-    minHeight: "100vh",
     minHeight: "100svh",
     display: "flex",
     justifyContent: "center",
