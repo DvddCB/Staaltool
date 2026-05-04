@@ -1,7 +1,7 @@
 {
   "name": "artikelzoeker",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,8 @@
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "@zxing/browser": "^0.2.0"
+    "@zxing/browser": "^0.2.0",
+    "jsbarcode": "^3.11.6"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.0",
