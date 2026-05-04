@@ -36,7 +36,7 @@ export default function App() {
         <img src="/logo.png" alt="logo" style={styles.logo} />
 
         {/* TITEL */}
-        <h2 style={styles.title}>LOGIN</h2>
+       <h2 style={styles.title}>CB LOGIN</h2>
 
         {/* INPUTS */}
         <input
