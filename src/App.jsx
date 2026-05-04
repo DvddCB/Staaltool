@@ -2,146 +2,105 @@ import { useState } from "react";
 
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
-  const [loginName, setLoginName] = useState("");
-  const [loginPassword, setLoginPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
-  function handleLogin(e) {
-    e.preventDefault();
-
+  const handleLogin = () => {
     if (
-      loginName === "Circulaire-Bouwmaterialen" &&
-      loginPassword === "Houthandel18"
+      username === "Circulaire-Bouwmaterialen" &&
+      password === "Houthandel18"
     ) {
       setLoggedIn(true);
-      setLoginError("");
     } else {
-      setLoginError("Onjuiste inloggegevens");
+      setError("Onjuiste login gegevens");
     }
-  }
+  };
 
-  // LOGIN SCHERM
   if (!loggedIn) {
     return (
-      <div style={styles.loginPage}>
-        <form style={styles.loginCard} onSubmit={handleLogin}>
-          
-          <img src="/logo.png" alt="CB Logo" style={styles.logo} />
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <img src="/logo.png" alt="logo" style={styles.logo} />
 
-          <h1 style={styles.title}>Staaltool</h1>
-          <p style={styles.subtitle}>
-            Log in om artikelcodes te genereren
-          </p>
+          <h2 style={styles.title}>Login</h2>
 
           <input
             style={styles.input}
-            placeholder="Inlog"
-            value={loginName}
-            onChange={(e) => setLoginName(e.target.value)}
+            placeholder="Gebruikersnaam"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
 
           <input
             style={styles.input}
             type="password"
             placeholder="Wachtwoord"
-            value={loginPassword}
-            onChange={(e) => setLoginPassword(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
 
-          {loginError && (
-            <div style={styles.error}>{loginError}</div>
-          )}
-
-          <button style={styles.button}>
+          <button style={styles.button} onClick={handleLogin}>
             Inloggen
           </button>
-        </form>
+
+          {error && <p style={styles.error}>{error}</p>}
+        </div>
       </div>
     );
   }
 
-  // NA LOGIN (HIER KOMT JE TOOL)
   return (
-    <div style={styles.app}>
-      <h1>✅ Ingelogd</h1>
-      <p>Hier komt straks de staaltool.</p>
+    <div style={styles.container}>
+      <div style={styles.card}>
+        <h1>Welkom 👋</h1>
+        <p>Je bent ingelogd in de staaltool</p>
+      </div>
     </div>
   );
 }
 
 const styles = {
-  loginPage: {
-    minHeight: "100vh",
-    background: "linear-gradient(135deg, #dbeafe, #f8fafc)",
+  container: {
+    height: "100vh",
     display: "flex",
-    alignItems: "center",
     justifyContent: "center",
-    fontFamily: "Arial, sans-serif"
-  },
-
-  loginCard: {
-    width: "100%",
-    maxWidth: 420,
-    background: "white",
-    borderRadius: 24,
-    padding: 40,
-    boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
-    display: "flex",
-    flexDirection: "column",
     alignItems: "center",
-    gap: 15
+    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
   },
-
+  card: {
+    background: "white",
+    padding: "40px",
+    borderRadius: "12px",
+    width: "320px",
+    textAlign: "center",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+  },
   logo: {
-    width: 160,
-    height: "auto",
-    marginBottom: 10
+    width: "120px",
+    marginBottom: "20px",
   },
-
   title: {
-    margin: 0,
-    fontSize: 28,
-    color: "#0f172a"
+    marginBottom: "20px",
   },
-
-  subtitle: {
-    margin: 0,
-    color: "#64748b",
-    marginBottom: 10,
-    textAlign: "center"
-  },
-
   input: {
     width: "100%",
-    padding: 12,
-    borderRadius: 10,
-    border: "1px solid #cbd5e1",
-    fontSize: 16
+    padding: "10px",
+    marginBottom: "10px",
+    borderRadius: "6px",
+    border: "1px solid #ccc",
   },
-
   button: {
     width: "100%",
-    padding: 14,
-    borderRadius: 10,
-    border: "none",
-    background: "#1234aa",
+    padding: "10px",
+    background: "#2a5298",
     color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
-    cursor: "pointer"
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
   },
-
   error: {
-    background: "#fee2e2",
-    color: "#991b1b",
-    padding: 10,
-    borderRadius: 8,
-    width: "100%",
-    textAlign: "center"
+    color: "red",
+    marginTop: "10px",
   },
-
-  app: {
-    padding: 40,
-    fontFamily: "Arial"
-  }
 };
