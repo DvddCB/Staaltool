@@ -62,39 +62,39 @@ const kleurData = [
   { code: "14", naam: "Zwart", kleur: "#000000", text: "white" }
 ];
 
+const baseMaps = {
+  HEA: {
+    "100": "24010110096", "120": "240102120110", "140": "240103140135",
+    "160": "240104160155", "180": "240105180175", "200": "240106200195",
+    "220": "240107220215", "240": "240108240235", "260": "240109260255",
+    "280": "240110280275", "300": "240111300295", "320": "240112320300",
+    "340": "240113340300"
+  },
+  HEB: {
+    "100": "240202100100", "120": "240203120120", "140": "240204140140",
+    "160": "240205160160", "180": "240206180180", "200": "240207200200",
+    "220": "240208220220", "240": "240209240240", "260": "240210260260",
+    "280": "240211280280", "300": "240212300300", "320": "240213320300",
+    "340": "240214340300"
+  },
+  IPE: {
+    "100": "24040210050", "120": "24040312060", "140": "24040414070",
+    "160": "24040516080", "180": "24040618090", "200": "240407200100",
+    "220": "240408220110", "240": "240409240120", "270": "240410270135",
+    "300": "240411300150", "330": "240412330165", "360": "240413360180",
+    "400": "240414400200"
+  },
+  UNP: {
+    "100": "24050210050", "120": "24050312060", "140": "24050414070",
+    "160": "24050516080", "180": "24050618090", "200": "240507200100",
+    "220": "240508220110", "240": "240509240120", "260": "240510260130",
+    "280": "240511280140", "300": "240512300150", "330": "240513300165"
+  }
+};
+
 function getArticleCode(type, size, lengthMm, colorCode) {
   const length = Number(lengthMm);
   if (!type || !size || !length || length <= 0 || !colorCode) return "";
-
-  const baseMaps = {
-    HEA: {
-      "100": "24010110096", "120": "240102120110", "140": "240103140135",
-      "160": "240104160155", "180": "240105180175", "200": "240106200195",
-      "220": "240107220215", "240": "240108240235", "260": "240109260255",
-      "280": "240110280275", "300": "240111300295", "320": "240112320300",
-      "340": "240113340300"
-    },
-    HEB: {
-      "100": "240202100100", "120": "240203120120", "140": "240204140140",
-      "160": "240205160160", "180": "240206180180", "200": "240207200200",
-      "220": "240208220220", "240": "240209240240", "260": "240210260260",
-      "280": "240211280280", "300": "240212300300", "320": "240213320300",
-      "340": "240214340300"
-    },
-    IPE: {
-      "100": "24040210050", "120": "24040312060", "140": "24040414070",
-      "160": "24040516080", "180": "24040618090", "200": "240407200100",
-      "220": "240408220110", "240": "240409240120", "270": "240410270135",
-      "300": "240411300150", "330": "240412330165", "360": "240413360180",
-      "400": "240414400200"
-    },
-    UNP: {
-      "100": "24050210050", "120": "24050312060", "140": "24050414070",
-      "160": "24050516080", "180": "24050618090", "200": "240507200100",
-      "220": "240508220110", "240": "240509240120", "260": "240510260130",
-      "280": "240511280140", "300": "240512300150", "330": "240513300165"
-    }
-  };
 
   if (!baseMaps[type]) return "";
   const base = baseMaps[type][String(size)];
@@ -106,6 +106,67 @@ function getArticleCode(type, size, lengthMm, colorCode) {
 
   if (!(lengteEinde === "00" || lengteEinde === "50")) return "";
   return code;
+}
+
+function parseArticleCode(rawCode) {
+  const cleanCode = String(rawCode || "").replace(/\D/g, "");
+  if (!cleanCode) return null;
+
+  const possibleColorCodes = kleurData
+    .map((color) => color.code)
+    .sort((a, b) => b.length - a.length);
+
+  for (const colorCode of possibleColorCodes) {
+    if (!cleanCode.endsWith(colorCode)) continue;
+
+    const withoutColor = cleanCode.slice(0, -colorCode.length);
+    if (!withoutColor.endsWith("9")) continue;
+
+    const withoutSeparator = withoutColor.slice(0, -1);
+
+    for (let lengthDigits = 5; lengthDigits >= 4; lengthDigits--) {
+      if (withoutSeparator.length <= lengthDigits) continue;
+
+      const lengthText = withoutSeparator.slice(-lengthDigits);
+      const length = Number(lengthText);
+      const base = withoutSeparator.slice(0, -lengthDigits);
+
+      const lengthIsValid = length >= 1000 && length <= 20000 && length % 50 === 0;
+      if (!lengthIsValid) continue;
+
+      const found = findArticleByBase(base);
+      if (!found) continue;
+
+      const color = kleurData.find((item) => item.code === colorCode);
+
+      return {
+        code: cleanCode,
+        base,
+        type: found.type,
+        size: found.size,
+        length,
+        colorCode,
+        colorName: color?.naam || ""
+      };
+    }
+  }
+
+  return null;
+}
+
+function findArticleByBase(base) {
+  for (const typeName of Object.keys(baseMaps)) {
+    for (const sizeName of Object.keys(baseMaps[typeName])) {
+      if (baseMaps[typeName][sizeName] === base) {
+        return {
+          type: typeName,
+          size: sizeName
+        };
+      }
+    }
+  }
+
+  return null;
 }
 
 function BarcodeView({ value }) {
@@ -168,6 +229,9 @@ export default function App() {
   const [scanResult, setScanResult] = useState("");
   const [scanError, setScanError] = useState("");
 
+  const [manualCode, setManualCode] = useState("");
+  const [searchError, setSearchError] = useState("");
+
   const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) =>
@@ -200,6 +264,8 @@ export default function App() {
     setQuery("");
     setScanResult("");
     setScanError("");
+    setManualCode("");
+    setSearchError("");
   }
 
   function stopScanner() {
@@ -269,8 +335,40 @@ export default function App() {
     setStep("result");
   }
 
+  function fillArticleFromCode(rawCode) {
+    const parsed = parseArticleCode(rawCode);
+
+    if (!parsed) {
+      setSearchError("Geen artikel gevonden. Controleer de barcode of artikelcode.");
+      return false;
+    }
+
+    setType(parsed.type);
+    setSize(parsed.size);
+    setBaseSize("");
+    setLengthMm(parsed.length);
+    setColorCode(parsed.colorCode);
+    setColorName(parsed.colorName);
+    setStep("result");
+    setSearchError("");
+    return true;
+  }
+
+  function handleManualSearch(event) {
+    event.preventDefault();
+    setScanResult(manualCode);
+    fillArticleFromCode(manualCode);
+  }
+
   function goBack() {
     if (step === "result") {
+      if (selectedModule === "Artikelzoeker") {
+        setStep("search");
+        setColorCode("");
+        setColorName("");
+        return;
+      }
+
       setStep("colors");
       setColorCode("");
       setColorName("");
@@ -287,12 +385,15 @@ export default function App() {
       setBaseSize("");
     } else if (step === "sizes") {
       resetTool();
+    } else if (step === "search") {
+      goToMenu();
     }
   }
 
   async function startScanner() {
     setScanResult("");
     setScanError("");
+    setSearchError("");
     setScanning(true);
 
     try {
@@ -302,7 +403,9 @@ export default function App() {
         "video-preview",
         (result) => {
           if (result) {
-            setScanResult(result.getText());
+            const text = result.getText();
+            setScanResult(text);
+            fillArticleFromCode(text);
             stopScanner();
           }
         }
@@ -377,6 +480,8 @@ export default function App() {
     );
   }
 
+  const activeStep = selectedModule === "Artikelzoeker" && step === "types" ? "search" : step;
+
   return (
     <div style={styles.appPage}>
       <div style={styles.appShell}>
@@ -413,194 +518,220 @@ export default function App() {
 
         {scanResult && (
           <div style={styles.scanResult}>
-            Gescande barcode: <strong>{scanResult}</strong>
+            Gescande / ingevoerde code: <strong>{scanResult}</strong>
           </div>
         )}
 
-        {scanError && (
-          <div style={styles.scanError}>
-            {scanError}
-          </div>
-        )}
+        {scanError && <div style={styles.scanError}>{scanError}</div>}
+        {searchError && <div style={styles.scanError}>{searchError}</div>}
 
-        <div style={styles.steps}>
-          <div style={step === "types" ? styles.activeStep : styles.step}>1. Soort</div>
-          <div style={step === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
-          <div style={step === "thickness" ? styles.activeStep : styles.step}>3. Dikte</div>
-          <div style={step === "length" ? styles.activeStep : styles.step}>4. Lengte</div>
-          <div style={step === "colors" || step === "result" ? styles.activeStep : styles.step}>5. Kleur</div>
-        </div>
+        {selectedModule === "Artikelzoeker" && step !== "result" ? (
+          <>
+            <div style={styles.steps}>
+              <div style={styles.activeStep}>1. Zoeken</div>
+              <div style={styles.step}>2. Resultaat</div>
+            </div>
 
-        {step !== "types" && (
-          <button style={styles.backButton} onClick={goBack}>
-            Terug
-          </button>
-        )}
+            <button style={styles.backButton} onClick={goToMenu}>
+              Terug naar menu
+            </button>
 
-        {step === "types" && (
-          <section style={styles.grid}>
-            {types.map((item) => (
-              <button key={item} style={styles.cardButton} onClick={() => chooseType(item)}>
-                <span style={styles.cardTitle}>{item}</span>
-                <span style={styles.cardText}>Bekijk maten</span>
+            <section style={styles.twoColumn}>
+              <div style={styles.panel}>
+                <p style={styles.label}>Artikelzoeker</p>
+                <h2 style={styles.bigTitle}>Scan of voer artikelcode in</h2>
+
+                <form onSubmit={handleManualSearch}>
+                  <label style={styles.inputLabel}>Artikelcode of barcode</label>
+                  <input
+                    style={styles.lengthInput}
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    placeholder="Bijv. 240101100963000911"
+                    inputMode="numeric"
+                  />
+
+                  <button style={styles.primaryButton} type="submit">
+                    Artikel zoeken
+                  </button>
+                </form>
+
+                <button style={styles.secondaryButton} onClick={startScanner}>
+                  Barcode scannen met camera
+                </button>
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            <div style={styles.steps}>
+              <div style={activeStep === "types" ? styles.activeStep : styles.step}>1. Soort</div>
+              <div style={activeStep === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
+              <div style={activeStep === "thickness" ? styles.activeStep : styles.step}>3. Dikte</div>
+              <div style={activeStep === "length" ? styles.activeStep : styles.step}>4. Lengte</div>
+              <div style={activeStep === "colors" || activeStep === "result" ? styles.activeStep : styles.step}>5. Kleur</div>
+            </div>
+
+            {step !== "types" && (
+              <button style={styles.backButton} onClick={goBack}>
+                Terug
               </button>
-            ))}
-          </section>
-        )}
+            )}
 
-        {step === "sizes" && (
-          <section>
-            <div style={styles.panel}>
-              <h2 style={styles.sectionTitle}>{type} maten</h2>
-              <input
-                style={styles.searchInput}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Zoek maat..."
-              />
-            </div>
+            {step === "types" && (
+              <section style={styles.grid}>
+                {types.map((item) => (
+                  <button key={item} style={styles.cardButton} onClick={() => chooseType(item)}>
+                    <span style={styles.cardTitle}>{item}</span>
+                    <span style={styles.cardText}>Bekijk maten</span>
+                  </button>
+                ))}
+              </section>
+            )}
 
-            <div style={styles.grid}>
-              {filteredSizes.map((item) => (
-                <button key={item} style={styles.cardButton} onClick={() => chooseSize(item)}>
-                  <span style={styles.cardTitle}>
-                    {type} {item}
-                  </span>
-                  <span style={styles.cardText}>
-                    {type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {step === "thickness" && (
-          <section>
-            <div style={styles.panel}>
-              <h2 style={styles.sectionTitle}>Koker {baseSize}</h2>
-              <p style={styles.muted}>Kies de wanddikte.</p>
-            </div>
-
-            <div style={styles.grid}>
-              {kokerData[baseSize].map((thickness) => (
-                <button
-                  key={thickness}
-                  style={styles.cardButton}
-                  onClick={() => chooseThickness(thickness)}
-                >
-                  <span style={styles.cardTitle}>
-                    {baseSize}x{thickness}
-                  </span>
-                  <span style={styles.cardText}>{thickness} mm dikte</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {step === "length" && (
-          <section style={styles.twoColumn}>
-            <div style={styles.panel}>
-              <p style={styles.label}>Gekozen profiel</p>
-              <h2 style={styles.bigTitle}>
-                {type} {size}
-              </h2>
-
-              <label style={styles.inputLabel}>Gewenste lengte in mm</label>
-              <input
-                style={styles.lengthInput}
-                type="number"
-                min="1000"
-                max="20000"
-                step="50"
-                value={lengthMm}
-                onChange={(e) => setLengthMm(Number(e.target.value))}
-              />
-
-              {!lengthIsValid && (
-                <div style={styles.warning}>
-                  Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm.
+            {step === "sizes" && (
+              <section>
+                <div style={styles.panel}>
+                  <h2 style={styles.sectionTitle}>{type} maten</h2>
+                  <input
+                    style={styles.searchInput}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Zoek maat..."
+                  />
                 </div>
-              )}
 
-              <button
-                style={lengthIsValid ? styles.primaryButton : styles.disabledButton}
-                disabled={!lengthIsValid}
-                onClick={() => setStep("colors")}
-              >
-                Verder naar kleur
-              </button>
-            </div>
-          </section>
-        )}
-
-        {step === "colors" && (
-          <section>
-            <div style={styles.panel}>
-              <p style={styles.label}>Gekozen profiel en lengte</p>
-              <h2 style={styles.sectionTitle}>
-                {type} {size} - {lengthMm} mm
-              </h2>
-            </div>
-
-            <div style={styles.grid}>
-              {kleurData.map((color) => (
-                <button
-                  key={color.code}
-                  style={{
-                    ...styles.colorButton,
-                    background: color.kleur,
-                    color: color.text,
-                    border: color.border || "none"
-                  }}
-                  onClick={() => chooseColor(color)}
-                >
-                  <span style={styles.colorCode}>{color.code}</span>
-                  <span style={styles.colorName}>{color.naam}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {step === "result" && (
-          <section style={styles.twoColumn}>
-            <div style={styles.panel}>
-              <p style={styles.label}>Samenvatting</p>
-              <h2 style={styles.bigTitle}>
-                {type} {size}
-              </h2>
-
-              <p style={styles.summaryLine}>Lengte: {lengthMm} mm</p>
-              <p style={styles.summaryLine}>
-                Kleur: {colorCode}. {colorName}
-              </p>
-
-              <button style={styles.primaryButton} onClick={resetTool}>
-                Nieuwe code maken
-              </button>
-            </div>
-
-            <div style={styles.resultPanel}>
-              <h2 style={styles.resultTitle}>
-                {articleCode ? "Artikel gevonden" : "Geen artikelcode"}
-              </h2>
-
-              <p style={styles.resultLabel}>Artikelcode</p>
-
-              {articleCode ? (
-                <div style={styles.articleCode}>{articleCode}</div>
-              ) : (
-                <div style={styles.warningDark}>
-                  Voor deze combinatie is nog geen stamcode toegevoegd.
+                <div style={styles.grid}>
+                  {filteredSizes.map((item) => (
+                    <button key={item} style={styles.cardButton} onClick={() => chooseSize(item)}>
+                      <span style={styles.cardTitle}>
+                        {type} {item}
+                      </span>
+                      <span style={styles.cardText}>
+                        {type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              )}
+              </section>
+            )}
 
-              <p style={styles.resultLabel}>Barcode</p>
-              <BarcodeView value={articleCode} />
-            </div>
-          </section>
+            {step === "thickness" && (
+              <section>
+                <div style={styles.panel}>
+                  <h2 style={styles.sectionTitle}>Koker {baseSize}</h2>
+                  <p style={styles.muted}>Kies de wanddikte.</p>
+                </div>
+
+                <div style={styles.grid}>
+                  {kokerData[baseSize].map((thickness) => (
+                    <button
+                      key={thickness}
+                      style={styles.cardButton}
+                      onClick={() => chooseThickness(thickness)}
+                    >
+                      <span style={styles.cardTitle}>{baseSize}x{thickness}</span>
+                      <span style={styles.cardText}>{thickness} mm dikte</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {step === "length" && (
+              <section style={styles.twoColumn}>
+                <div style={styles.panel}>
+                  <p style={styles.label}>Gekozen profiel</p>
+                  <h2 style={styles.bigTitle}>{type} {size}</h2>
+
+                  <label style={styles.inputLabel}>Gewenste lengte in mm</label>
+                  <input
+                    style={styles.lengthInput}
+                    type="number"
+                    min="1000"
+                    max="20000"
+                    step="50"
+                    value={lengthMm}
+                    onChange={(e) => setLengthMm(Number(e.target.value))}
+                  />
+
+                  {!lengthIsValid && (
+                    <div style={styles.warning}>
+                      Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm.
+                    </div>
+                  )}
+
+                  <button
+                    style={lengthIsValid ? styles.primaryButton : styles.disabledButton}
+                    disabled={!lengthIsValid}
+                    onClick={() => setStep("colors")}
+                  >
+                    Verder naar kleur
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {step === "colors" && (
+              <section>
+                <div style={styles.panel}>
+                  <p style={styles.label}>Gekozen profiel en lengte</p>
+                  <h2 style={styles.sectionTitle}>{type} {size} - {lengthMm} mm</h2>
+                </div>
+
+                <div style={styles.grid}>
+                  {kleurData.map((color) => (
+                    <button
+                      key={color.code}
+                      style={{
+                        ...styles.colorButton,
+                        background: color.kleur,
+                        color: color.text,
+                        border: color.border || "none"
+                      }}
+                      onClick={() => chooseColor(color)}
+                    >
+                      <span style={styles.colorCode}>{color.code}</span>
+                      <span style={styles.colorName}>{color.naam}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {step === "result" && (
+              <section style={styles.twoColumn}>
+                <div style={styles.panel}>
+                  <p style={styles.label}>Samenvatting</p>
+                  <h2 style={styles.bigTitle}>{type} {size}</h2>
+
+                  <p style={styles.summaryLine}>Lengte: {lengthMm} mm</p>
+                  <p style={styles.summaryLine}>Kleur: {colorCode}. {colorName}</p>
+
+                  <button style={styles.primaryButton} onClick={selectedModule === "Artikelzoeker" ? resetTool : resetTool}>
+                    {selectedModule === "Artikelzoeker" ? "Nieuwe zoekopdracht" : "Nieuwe code maken"}
+                  </button>
+                </div>
+
+                <div style={styles.resultPanel}>
+                  <h2 style={styles.resultTitle}>{articleCode ? "Artikel gevonden" : "Geen artikelcode"}</h2>
+
+                  <p style={styles.resultLabel}>Artikelcode</p>
+
+                  {articleCode ? (
+                    <div style={styles.articleCode}>{articleCode}</div>
+                  ) : (
+                    <div style={styles.warningDark}>
+                      Voor deze combinatie is nog geen stamcode toegevoegd.
+                    </div>
+                  )}
+
+                  <p style={styles.resultLabel}>Barcode</p>
+                  <BarcodeView value={articleCode} />
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -1003,6 +1134,18 @@ const styles = {
     border: "none",
     borderRadius: 14,
     background: "#ff7a00",
+    color: "white",
+    padding: "14px 16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  secondaryButton: {
+    marginTop: 10,
+    width: "100%",
+    border: "none",
+    borderRadius: 14,
+    background: "#1234aa",
     color: "white",
     padding: "14px 16px",
     fontWeight: 800,
