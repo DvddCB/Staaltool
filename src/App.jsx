@@ -7,9 +7,25 @@ const profielData = {
   IPE: [100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400],
   UNP: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 330],
   Koker: [],
-  "Hoeklijn gelijkzijdig": ["20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5", "60x60x6", "70x70x7", "80x80x8", "100x100x10"],
-  "Hoeklijn ongelijkzijdig": ["40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"],
-  Stripstaal: ["40x4", "40x5", "40x6", "40x8", "40x10", "50x4", "50x5", "50x6", "50x8", "50x10", "60x5", "60x6", "60x8", "60x10", "80x6", "80x8", "80x10", "80x12", "100x8", "100x10", "100x12", "100x15", "100x20", "120x10", "120x12", "120x15", "120x20", "150x10", "150x12", "150x15", "150x20", "200x10", "200x15", "200x20", "200x25", "250x20", "250x25", "250x30", "300x20", "300x25", "300x30"]
+  "Hoeklijn gelijkzijdig": [
+    "20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5",
+    "60x60x6", "70x70x7", "80x80x8", "100x100x10"
+  ],
+  "Hoeklijn ongelijkzijdig": [
+    "40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"
+  ],
+  Stripstaal: [
+    "40x4", "40x5", "40x6", "40x8", "40x10",
+    "50x4", "50x5", "50x6", "50x8", "50x10",
+    "60x5", "60x6", "60x8", "60x10",
+    "80x6", "80x8", "80x10", "80x12",
+    "100x8", "100x10", "100x12", "100x15", "100x20",
+    "120x10", "120x12", "120x15", "120x20",
+    "150x10", "150x12", "150x15", "150x20",
+    "200x10", "200x15", "200x20", "200x25",
+    "250x20", "250x25", "250x30",
+    "300x20", "300x25", "300x30"
+  ]
 };
 
 const kokerData = {
@@ -32,83 +48,51 @@ const kokerData = {
 const kleurData = [
   { code: "1", naam: "Blauw", kleur: "#2563eb", text: "white" },
   { code: "2", naam: "Bruin", kleur: "#8b5a2b", text: "white" },
-  { code: "3", naam: "Geel", kleur: "#eab308", text: "#111827" },
-  { code: "4", naam: "Gegalvaniseerd", kleur: "#9ca3af", text: "#111827" },
+  { code: "3", naam: "Geel", kleur: "#eab308", text: "#0f172a" },
+  { code: "4", naam: "Gegalvaniseerd", kleur: "#9ca3af", text: "#0f172a" },
   { code: "5", naam: "Gemenied", kleur: "#7f1d1d", text: "white" },
   { code: "6", naam: "Grijs", kleur: "#6b7280", text: "white" },
   { code: "7", naam: "Groen", kleur: "#16a34a", text: "white" },
   { code: "8", naam: "Lichte corrosie", kleur: "#b45309", text: "white" },
-  { code: "9", naam: "Onbehandeld", kleur: "#d1d5db", text: "#111827" },
+  { code: "9", naam: "Onbehandeld", kleur: "#d1d5db", text: "#0f172a" },
   { code: "10", naam: "Oranje", kleur: "#ff7a00", text: "white" },
   { code: "11", naam: "Rood", kleur: "#dc2626", text: "white" },
   { code: "12", naam: "Roze", kleur: "#ec4899", text: "white" },
-  { code: "13", naam: "Wit", kleur: "#ffffff", text: "#111827", border: "1px solid #cbd5e1" },
+  { code: "13", naam: "Wit", kleur: "#ffffff", text: "#0f172a", border: "1px solid #cbd5e1" },
   { code: "14", naam: "Zwart", kleur: "#000000", text: "white" }
 ];
 
 function getArticleCode(type, size, lengthMm, colorCode) {
   const length = Number(lengthMm);
-  if (!type || !size || !length || !colorCode) return "";
+  if (!type || !size || !length || length <= 0 || !colorCode) return "";
 
   const baseMaps = {
     HEA: {
-      "100": "24010110096",
-      "120": "240102120110",
-      "140": "240103140135",
-      "160": "240104160155",
-      "180": "240105180175",
-      "200": "240106200195",
-      "220": "240107220215",
-      "240": "240108240235",
-      "260": "240109260255",
-      "280": "240110280275",
-      "300": "240111300295",
-      "320": "240112320300",
+      "100": "24010110096", "120": "240102120110", "140": "240103140135",
+      "160": "240104160155", "180": "240105180175", "200": "240106200195",
+      "220": "240107220215", "240": "240108240235", "260": "240109260255",
+      "280": "240110280275", "300": "240111300295", "320": "240112320300",
       "340": "240113340300"
     },
     HEB: {
-      "100": "240202100100",
-      "120": "240203120120",
-      "140": "240204140140",
-      "160": "240205160160",
-      "180": "240206180180",
-      "200": "240207200200",
-      "220": "240208220220",
-      "240": "240209240240",
-      "260": "240210260260",
-      "280": "240211280280",
-      "300": "240212300300",
-      "320": "240213320300",
+      "100": "240202100100", "120": "240203120120", "140": "240204140140",
+      "160": "240205160160", "180": "240206180180", "200": "240207200200",
+      "220": "240208220220", "240": "240209240240", "260": "240210260260",
+      "280": "240211280280", "300": "240212300300", "320": "240213320300",
       "340": "240214340300"
     },
     IPE: {
-      "100": "24040210050",
-      "120": "24040312060",
-      "140": "24040414070",
-      "160": "24040516080",
-      "180": "24040618090",
-      "200": "240407200100",
-      "220": "240408220110",
-      "240": "240409240120",
-      "270": "240410270135",
-      "300": "240411300150",
-      "330": "240412330165",
-      "360": "240413360180",
+      "100": "24040210050", "120": "24040312060", "140": "24040414070",
+      "160": "24040516080", "180": "24040618090", "200": "240407200100",
+      "220": "240408220110", "240": "240409240120", "270": "240410270135",
+      "300": "240411300150", "330": "240412330165", "360": "240413360180",
       "400": "240414400200"
     },
     UNP: {
-      "100": "24050210050",
-      "120": "24050312060",
-      "140": "24050414070",
-      "160": "24050516080",
-      "180": "24050618090",
-      "200": "240507200100",
-      "220": "240508220110",
-      "240": "240509240120",
-      "260": "240510260130",
-      "280": "240511280140",
-      "300": "240512300150",
-      "330": "240513300165"
+      "100": "24050210050", "120": "24050312060", "140": "24050414070",
+      "160": "24050516080", "180": "24050618090", "200": "240507200100",
+      "220": "240508220110", "240": "240509240120", "260": "240510260130",
+      "280": "240511280140", "300": "240512300150", "330": "240513300165"
     }
   };
 
@@ -118,9 +102,9 @@ function getArticleCode(type, size, lengthMm, colorCode) {
 
   const code = base + String(length) + "9" + String(colorCode);
   const pos9 = code.length - String(colorCode).length - 1;
-  const lengthEnd = code.slice(pos9 - 2, pos9);
+  const lengteEinde = code.slice(pos9 - 2, pos9);
 
-  if (lengthEnd !== "00" && lengthEnd !== "50") return "";
+  if (!(lengteEinde === "00" || lengteEinde === "50")) return "";
   return code;
 }
 
@@ -165,6 +149,8 @@ export default function App() {
   const controlsRef = useRef(null);
 
   const [loggedIn, setLoggedIn] = useState(false);
+  const [selectedModule, setSelectedModule] = useState("");
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -182,7 +168,7 @@ export default function App() {
   const [scanResult, setScanResult] = useState("");
   const [scanError, setScanError] = useState("");
 
-  const types = Object.keys(profielData);
+  const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) =>
     String(item).toLowerCase().includes(query.toLowerCase())
@@ -212,14 +198,36 @@ export default function App() {
     setColorCode("");
     setColorName("");
     setQuery("");
+    setScanResult("");
+    setScanError("");
+  }
+
+  function stopScanner() {
+    if (controlsRef.current) {
+      controlsRef.current.stop();
+      controlsRef.current = null;
+    }
+    setScanning(false);
   }
 
   function logout() {
     stopScanner();
     setLoggedIn(false);
+    setSelectedModule("");
     setUsername("");
     setPassword("");
     setError("");
+    resetTool();
+  }
+
+  function goToMenu() {
+    stopScanner();
+    setSelectedModule("");
+    resetTool();
+  }
+
+  function chooseModule(moduleName) {
+    setSelectedModule(moduleName);
     resetTool();
   }
 
@@ -268,12 +276,11 @@ export default function App() {
       setColorName("");
     } else if (step === "colors") {
       setStep("length");
+      setColorCode("");
+      setColorName("");
     } else if (step === "length") {
-      if (type === "Koker") {
-        setStep("thickness");
-      } else {
-        setStep("sizes");
-      }
+      if (type === "Koker") setStep("thickness");
+      else setStep("sizes");
       setSize("");
     } else if (step === "thickness") {
       setStep("sizes");
@@ -306,14 +313,6 @@ export default function App() {
       setScanning(false);
       setScanError("Camera kon niet worden gestart. Controleer cameratoegang en probeer opnieuw.");
     }
-  }
-
-  function stopScanner() {
-    if (controlsRef.current) {
-      controlsRef.current.stop();
-      controlsRef.current = null;
-    }
-    setScanning(false);
   }
 
   if (!loggedIn) {
@@ -349,6 +348,35 @@ export default function App() {
     );
   }
 
+  if (!selectedModule) {
+    return (
+      <div style={styles.menuPage}>
+        <div style={styles.menuCard}>
+          <img src="/logo.png" alt="logo" style={styles.menuLogo} />
+
+          <h1 style={styles.menuTitle}>Kies functie</h1>
+          <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
+
+          <div style={styles.menuGrid}>
+            <button style={styles.moduleButton} onClick={() => chooseModule("Artikel PICKER")}>
+              <span style={styles.moduleTitle}>Artikel PICKER</span>
+              <span style={styles.moduleText}>Artikelen samenstellen</span>
+            </button>
+
+            <button style={styles.moduleButton} onClick={() => chooseModule("Artikelzoeker")}>
+              <span style={styles.moduleTitle}>Artikelzoeker</span>
+              <span style={styles.moduleText}>Artikelen zoeken of scannen</span>
+            </button>
+          </div>
+
+          <button style={styles.menuLogoutButton} onClick={logout}>
+            Uitloggen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.appPage}>
       <div style={styles.appShell}>
@@ -356,12 +384,15 @@ export default function App() {
           <div style={styles.brandRow}>
             <img src="/logo.png" alt="logo" style={styles.headerLogo} />
             <div>
-              <h1 style={styles.headerTitle}>Artikelzoeker</h1>
+              <h1 style={styles.headerTitle}>{selectedModule}</h1>
               <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
             </div>
           </div>
 
           <div style={styles.headerActions}>
+            <button style={styles.menuButtonSmall} onClick={goToMenu}>
+              Menu
+            </button>
             <button style={styles.scanButton} onClick={startScanner}>
               Scan barcode
             </button>
@@ -637,6 +668,84 @@ const styles = {
     marginTop: 12
   },
 
+  menuPage: {
+    minHeight: "100vh",
+    minHeight: "100svh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
+    fontFamily: "Arial, sans-serif",
+    padding: 16,
+    boxSizing: "border-box"
+  },
+  menuCard: {
+    width: "100%",
+    maxWidth: 620,
+    background: "white",
+    borderRadius: 22,
+    padding: 26,
+    textAlign: "center",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+    boxSizing: "border-box"
+  },
+  menuLogo: {
+    width: "55%",
+    maxWidth: 190,
+    marginBottom: 12
+  },
+  menuTitle: {
+    margin: 0,
+    color: "#ff7a00",
+    fontSize: 34,
+    letterSpacing: 2,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  menuSubtitle: {
+    color: "#64748b",
+    marginTop: 6,
+    marginBottom: 20
+  },
+  menuGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+    gap: 14
+  },
+  moduleButton: {
+    minHeight: 135,
+    border: "none",
+    borderRadius: 18,
+    background: "#1234aa",
+    color: "white",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  moduleTitle: {
+    fontSize: 26,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    letterSpacing: 1
+  },
+  moduleText: {
+    marginTop: 8,
+    color: "#dbeafe"
+  },
+  menuLogoutButton: {
+    marginTop: 18,
+    border: "none",
+    borderRadius: 12,
+    background: "#ff7a00",
+    color: "white",
+    padding: "12px 16px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+
   appPage: {
     minHeight: "100vh",
     background: "linear-gradient(135deg, #e8f0ff 0%, #f8fafc 55%, #fff3e7 100%)",
@@ -690,6 +799,15 @@ const styles = {
     display: "flex",
     gap: 8,
     flexWrap: "wrap"
+  },
+  menuButtonSmall: {
+    border: "none",
+    borderRadius: 12,
+    background: "#0f172a",
+    color: "white",
+    padding: "10px 14px",
+    fontWeight: 700,
+    cursor: "pointer"
   },
   scanButton: {
     border: "none",
