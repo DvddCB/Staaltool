@@ -1,0 +1,150 @@
+import React, { useMemo, useState } from "react";
+
+const profielData = {
+  HEA: [100,120,140,160,180,200,220,240,260,280,300,320,340],
+  HEB: [100,120,140,160,180,200,220,240,260,280,300,320,340],
+  IPE: [100,120,140,160,180,200,220,240,270,300,330,360,400],
+  UNP: [100,120,140,160,180,200,220,240,260,280,300,330]
+};
+
+const kleurData = [
+  {code:"1", naam:"Blauw", kleur:"#2563eb"},
+  {code:"2", naam:"Bruin", kleur:"#8b5a2b"},
+  {code:"3", naam:"Geel", kleur:"#eab308"},
+  {code:"4", naam:"Gegalvaniseerd", kleur:"#9ca3af"},
+  {code:"5", naam:"Gemenied", kleur:"#7f1d1d"},
+  {code:"6", naam:"Grijs", kleur:"#6b7280"},
+  {code:"7", naam:"Groen", kleur:"#16a34a"},
+  {code:"8", naam:"Lichte corrosie", kleur:"#b45309"},
+  {code:"9", naam:"Onbehandeld", kleur:"#d1d5db"},
+  {code:"10", naam:"Oranje", kleur:"#f97316"},
+  {code:"11", naam:"Rood", kleur:"#dc2626"},
+  {code:"12", naam:"Roze", kleur:"#ec4899"},
+  {code:"13", naam:"Wit", kleur:"#ffffff"},
+  {code:"14", naam:"Zwart", kleur:"#000000"}
+];
+
+function getArticleCode(type,size,lengthMm,colorCode){
+  const length = Number(lengthMm);
+  if(!type || !size || !length || !colorCode) return "";
+
+  const baseMaps = {
+    HEA:{
+      "100":"24010110096","120":"240102120110","140":"240103140135",
+      "160":"240104160155","180":"240105180175","200":"240106200195",
+      "220":"240107220215","240":"240108240235","260":"240109260255",
+      "280":"240110280275","300":"240111300295","320":"240112320300",
+      "340":"240113340300"
+    },
+    HEB:{
+      "100":"240202100100","120":"240203120120","140":"240204140140",
+      "160":"240205160160","180":"240206180180","200":"240207200200",
+      "220":"240208220220","240":"240209240240","260":"240210260260",
+      "280":"240211280280","300":"240212300300","320":"240213320300",
+      "340":"240214340300"
+    },
+    IPE:{
+      "100":"24040210050","120":"24040312060","140":"24040414070",
+      "160":"24040516080","180":"24040618090","200":"240407200100",
+      "220":"240408220110","240":"240409240120","270":"240410270135",
+      "300":"240411300150","330":"240412330165","360":"240413360180",
+      "400":"240414400200"
+    },
+    UNP:{
+      "100":"24050210050","120":"24050312060","140":"24050414070",
+      "160":"24050516080","180":"24050618090","200":"240507200100",
+      "220":"240508220110","240":"240509240120","260":"240510260130",
+      "280":"240511280140","300":"240512300150","330":"240513300165"
+    }
+  };
+
+  if(baseMaps[type]){
+    const base = baseMaps[type][String(size)];
+    if(!base) return "";
+
+    const code = base + length + "9" + colorCode;
+
+    const pos9 = code.length - colorCode.length - 1;
+    const check = code.slice(pos9-2,pos9);
+
+    if(check !== "00" && check !== "50") return "";
+
+    return code;
+  }
+
+  return "";
+}
+
+export default function App(){
+
+  const [step,setStep] = useState("types");
+  const [type,setType] = useState("");
+  const [size,setSize] = useState("");
+  const [length,setLength] = useState(3000);
+  const [color,setColor] = useState("");
+
+  const valid = length>=1000 && length<=20000 && length%50===0;
+  const code = getArticleCode(type,size,length,color);
+
+  return(
+    <div style={{padding:20,fontFamily:"Arial"}}>
+
+      {step==="types" && (
+        <div>
+          {Object.keys(profielData).map(t=>(
+            <button key={t} onClick={()=>{setType(t);setStep("sizes")}}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {step==="sizes" && (
+        <div>
+          {profielData[type].map(s=>(
+            <button key={s} onClick={()=>{setSize(s);setStep("length")}}>
+              {type} {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {step==="length" && (
+        <div>
+          <h2>{type} {size}</h2>
+          <input type="number" step="50" value={length}
+            onChange={e=>setLength(Number(e.target.value))}/>
+          <button disabled={!valid} onClick={()=>setStep("colors")}>
+            Verder
+          </button>
+        </div>
+      )}
+
+      {step==="colors" && (
+        <div>
+          {kleurData.map(k=>{
+            const light = k.naam==="Wit";
+            return(
+              <button key={k.code}
+                style={{
+                  background:k.kleur,
+                  color:light?"black":"white",
+                  margin:5,padding:10
+                }}
+                onClick={()=>{setColor(k.code);setStep("result")}}>
+                {k.code} {k.naam}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {step==="result" && (
+        <div>
+          <h2>{code || "Geen code"}</h2>
+        </div>
+      )}
+
+    </div>
+  );
+}
