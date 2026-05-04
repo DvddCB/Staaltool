@@ -216,6 +216,9 @@ export default function App() {
   const [manualCode, setManualCode] = useState("");
   const [searchError, setSearchError] = useState("");
 
+  const [pickbonLines, setPickbonLines] = useState([]);
+  const [pickbonNumber, setPickbonNumber] = useState("");
+
   const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) =>
@@ -250,6 +253,8 @@ export default function App() {
     setScanError("");
     setManualCode("");
     setSearchError("");
+    setPickbonLines([]);
+    setPickbonNumber("");
   }
 
   function resetTool() {
@@ -342,10 +347,109 @@ export default function App() {
     return true;
   }
 
+  function articleDescription(parsed) {
+    return `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`;
+  }
+
+  function addCodeToPickbon(rawCode) {
+    const parsed = parseArticleCode(rawCode);
+
+    if (!parsed) {
+      setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + rawCode);
+      return false;
+    }
+
+    const articleCodeValue = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode);
+
+    setPickbonLines((currentLines) => {
+      const existingIndex = currentLines.findIndex((line) => line.articleCode === articleCodeValue);
+
+      if (existingIndex >= 0) {
+        return currentLines.map((line, index) =>
+          index === existingIndex
+            ? {
+                ...line,
+                quantity: line.quantity + 1,
+                scannedAt: new Date().toLocaleString("nl-NL")
+              }
+            : line
+        );
+      }
+
+      return [
+        ...currentLines,
+        {
+          id: Date.now() + "-" + Math.random().toString(16).slice(2),
+          articleCode: articleCodeValue,
+          description: articleDescription(parsed),
+          type: parsed.type,
+          size: parsed.size,
+          length: parsed.length,
+          colorCode: parsed.colorCode,
+          colorName: parsed.colorName,
+          quantity: 1,
+          processed: false,
+          scannedAt: new Date().toLocaleString("nl-NL")
+        }
+      ];
+    });
+
+    setType(parsed.type);
+    setSize(parsed.size);
+    setBaseSize("");
+    setLengthMm(parsed.length);
+    setColorCode(parsed.colorCode);
+    setColorName(parsed.colorName);
+    setSearchError("");
+    return true;
+  }
+
   function handleManualSearch(event) {
     event.preventDefault();
     setScanResult(manualCode);
+
+    if (selectedModule === "Artikelzoeker") {
+      addCodeToPickbon(manualCode);
+      setManualCode("");
+      return;
+    }
+
     fillArticleFromCode(manualCode);
+  }
+
+  function updatePickbonQuantity(lineId, nextQuantity) {
+    const quantity = Math.max(1, Number(nextQuantity) || 1);
+
+    setPickbonLines((currentLines) =>
+      currentLines.map((line) =>
+        line.id === lineId ? { ...line, quantity } : line
+      )
+    );
+  }
+
+  function togglePickbonProcessed(lineId) {
+    setPickbonLines((currentLines) =>
+      currentLines.map((line) =>
+        line.id === lineId ? { ...line, processed: !line.processed } : line
+      )
+    );
+  }
+
+  function removePickbonLine(lineId) {
+    setPickbonLines((currentLines) => currentLines.filter((line) => line.id !== lineId));
+  }
+
+  function clearPickbon() {
+    setPickbonLines([]);
+    setPickbonNumber("");
+    setScanResult("");
+    setSearchError("");
+  }
+
+  function finishPickbon() {
+    setPickbonLines((currentLines) =>
+      currentLines.map((line) => ({ ...line, processed: true }))
+    );
   }
 
   function goBack() {
@@ -399,7 +503,10 @@ export default function App() {
             const text = result.getText();
             setScanResult(text);
 
-            const found = fillArticleFromCode(text);
+            const found = selectedModule === "Artikelzoeker"
+              ? addCodeToPickbon(text)
+              : fillArticleFromCode(text);
+
             if (!found) {
               setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
             }
@@ -531,11 +638,19 @@ export default function App() {
 
             <section style={styles.twoColumn}>
               <div style={styles.panel}>
-                <p style={styles.label}>Artikelzoeker</p>
-                <h2 style={styles.bigTitle}>Scan of voer artikelcode in</h2>
+                <p style={styles.label}>Artikelzoeker / pickbon</p>
+                <h2 style={styles.bigTitle}>Scan bestellingen en verwerk pickbon</h2>
+
+                <label style={styles.inputLabel}>Pickbonnummer / ordernummer</label>
+                <input
+                  style={styles.lengthInput}
+                  value={pickbonNumber}
+                  onChange={(e) => setPickbonNumber(e.target.value)}
+                  placeholder="Bijv. PB-2026-001"
+                />
 
                 <form onSubmit={handleManualSearch}>
-                  <label style={styles.inputLabel}>Artikelcode of barcode</label>
+                  <label style={{ ...styles.inputLabel, marginTop: 14 }}>Artikelcode of barcode</label>
                   <input
                     style={styles.lengthInput}
                     value={manualCode}
@@ -545,13 +660,70 @@ export default function App() {
                   />
 
                   <button style={styles.primaryButton} type="submit">
-                    Artikel zoeken
+                    Toevoegen aan pickbon
                   </button>
                 </form>
 
                 <button style={styles.secondaryButton} onClick={startScanner}>
                   Barcode scannen met camera
                 </button>
+              </div>
+
+              <div style={styles.pickbonPanel}>
+                <div style={styles.pickbonHeader}>
+                  <div>
+                    <p style={styles.label}>Pickbon</p>
+                    <h2 style={styles.sectionTitle}>
+                      {pickbonNumber || "Nieuwe pickbon"}
+                    </h2>
+                  </div>
+
+                  <div style={styles.pickbonActions}>
+                    <button style={styles.smallDarkButton} onClick={finishPickbon} disabled={pickbonLines.length === 0}>
+                      Alles verwerkt
+                    </button>
+                    <button style={styles.smallOrangeButton} onClick={clearPickbon} disabled={pickbonLines.length === 0}>
+                      Leegmaken
+                    </button>
+                  </div>
+                </div>
+
+                {pickbonLines.length === 0 ? (
+                  <div style={styles.emptyPickbon}>
+                    Nog geen artikelen gescand. Scan een barcode of voer handmatig een artikelcode in.
+                  </div>
+                ) : (
+                  <div style={styles.pickbonList}>
+                    {pickbonLines.map((line) => (
+                      <div key={line.id} style={line.processed ? styles.pickbonLineDone : styles.pickbonLine}>
+                        <div style={styles.pickbonLineMain}>
+                          <strong>{line.description}</strong>
+                          <span style={styles.pickbonCode}>{line.articleCode}</span>
+                          <span style={styles.pickbonMeta}>Laatst gescand: {line.scannedAt}</span>
+                        </div>
+
+                        <div style={styles.pickbonLineControls}>
+                          <label style={styles.qtyLabel}>Aantal</label>
+                          <input
+                            style={styles.qtyInput}
+                            type="number"
+                            min="1"
+                            value={line.quantity}
+                            onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
+                          />
+
+                          <button style={styles.smallDarkButton} onClick={() => togglePickbonProcessed(line.id)}>
+                            {line.processed ? "Open" : "Verwerkt"}
+                          </button>
+
+                          <button style={styles.smallDangerButton} onClick={() => removePickbonLine(line.id)}>
+                            Verwijder
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </section>
           </>
@@ -1217,5 +1389,120 @@ const styles = {
     maxWidth: "100%",
     height: "auto",
     display: "block"
+  },
+  pickbonPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+    marginBottom: 12
+  },
+  pickbonHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    marginBottom: 12
+  },
+  pickbonActions: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  emptyPickbon: {
+    background: "#f8fafc",
+    border: "1px dashed #cbd5e1",
+    color: "#64748b",
+    borderRadius: 14,
+    padding: 16
+  },
+  pickbonList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10
+  },
+  pickbonLine: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    background: "#ffffff"
+  },
+  pickbonLineDone: {
+    border: "1px solid #bbf7d0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    background: "#f0fdf4"
+  },
+  pickbonLineMain: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 220,
+    flex: 1
+  },
+  pickbonCode: {
+    fontFamily: "monospace",
+    color: "#1234aa",
+    fontWeight: 800,
+    overflowWrap: "anywhere"
+  },
+  pickbonMeta: {
+    color: "#64748b",
+    fontSize: 12
+  },
+  pickbonLineControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  qtyLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: 800
+  },
+  qtyInput: {
+    width: 76,
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 16,
+    boxSizing: "border-box"
+  },
+  smallDarkButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#0f172a",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  smallOrangeButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#ff7a00",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  smallDangerButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#dc2626",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
   }
 };
