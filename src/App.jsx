@@ -18,11 +18,12 @@ export default function App() {
     }
   };
 
+  // Dashboard na login
   if (loggedIn) {
     return (
       <div style={styles.dashboard}>
         <h1>Welkom 👋</h1>
-        <p>Je bent ingelogd!</p>
+        <p>Je bent succesvol ingelogd</p>
       </div>
     );
   }
@@ -32,14 +33,12 @@ export default function App() {
       <div style={styles.card}>
         
         {/* LOGO */}
-        <img
-          src="/logo.png"
-          alt="logo"
-          style={styles.logo}
-        />
+        <img src="/logo.png" alt="logo" style={styles.logo} />
 
-        <h2 style={styles.title}>Login</h2>
+        {/* TITEL */}
+        <h2 style={styles.title}>LOGIN</h2>
 
+        {/* INPUTS */}
         <input
           type="text"
           placeholder="Gebruikersnaam"
@@ -56,10 +55,12 @@ export default function App() {
           style={styles.input}
         />
 
+        {/* BUTTON */}
         <button onClick={handleLogin} style={styles.button}>
           Inloggen
         </button>
 
+        {/* ERROR */}
         {error && <p style={styles.error}>{error}</p>}
       </div>
     </div>
@@ -76,38 +77,46 @@ const styles = {
   },
   card: {
     background: "#fff",
-    padding: "30px",
-    borderRadius: "12px",
+    padding: "35px",
+    borderRadius: "14px",
     width: "320px",
     textAlign: "center",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.2)",
+    boxShadow: "0 15px 35px rgba(0,0,0,0.25)",
   },
   logo: {
-    width: "120px",
+    width: "110px",
     marginBottom: "15px",
   },
   title: {
     marginBottom: "20px",
+    fontWeight: "900",
+    letterSpacing: "3px",
+    color: "#ff7a00", // ORANJE
+    fontSize: "26px",
   },
   input: {
     width: "100%",
-    padding: "10px",
-    marginBottom: "10px",
-    borderRadius: "6px",
+    padding: "12px",
+    marginBottom: "12px",
+    borderRadius: "8px",
     border: "1px solid #ccc",
+    fontSize: "14px",
   },
   button: {
     width: "100%",
-    padding: "10px",
-    background: "#2a5298",
+    padding: "12px",
+    background: "#ff7a00", // ORANJE BUTTON
     color: "#fff",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "8px",
     cursor: "pointer",
+    fontWeight: "600",
+    fontSize: "15px",
   },
   error: {
     color: "red",
     marginTop: "10px",
+    fontSize: "14px",
   },
   dashboard: {
     height: "100vh",
