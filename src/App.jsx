@@ -1,129 +1,100 @@
-import { useState } from "react";
+import React, { useMemo, useState } from "react";
 
-export default function App() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loggedIn, setLoggedIn] = useState(false);
-  const [error, setError] = useState("");
+const profielData = {
+  HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
+  HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
+  IPE: [100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400],
+  UNP: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 330],
+  "Hoeklijn gelijkzijdig": ["20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5", "60x60x6", "70x70x7", "80x80x8", "100x100x10"],
+  "Hoeklijn ongelijkzijdig": ["40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"],
+  Stripstaal: [
+    "40x4", "40x5", "40x6", "40x8", "40x10",
+    "50x4", "50x5", "50x6", "50x8", "50x10",
+    "60x5", "60x6", "60x8", "60x10",
+    "80x6", "80x8", "80x10", "80x12",
+    "100x8", "100x10", "100x12", "100x15", "100x20",
+    "120x10", "120x12", "120x15", "120x20",
+    "150x10", "150x12", "150x15", "150x20",
+    "200x10", "200x15", "200x20", "200x25",
+    "250x20", "250x25", "250x30",
+    "300x20", "300x25", "300x30"
+  ]
+};
 
-  const handleLogin = () => {
-    if (
-      username === "Circulaire-Bouwmaterialen" &&
-      password === "Houthandel18"
-    ) {
-      setLoggedIn(true);
-      setError("");
-    } else {
-      setError("Onjuiste gegevens");
+const kokerData = {
+  "40x40": [3, 4, 5, 6, 8, 10],
+  "50x50": [3, 4, 5, 6, 8, 10],
+  "60x60": [3, 4, 5, 6, 8, 10],
+  "70x70": [3, 4, 5, 6, 8, 10],
+  "80x80": [3, 4, 5, 6, 8, 10],
+  "90x90": [3, 4, 5, 6, 8, 10],
+  "100x100": [3, 4, 5, 6, 8, 10],
+  "110x110": [3, 4, 5, 6, 8, 10],
+  "120x120": [3, 4, 5, 6, 8, 10],
+  "140x140": [3, 4, 5, 6, 8, 10],
+  "150x150": [3, 4, 5, 6, 8, 10],
+  "160x160": [3, 4, 5, 6, 8, 10],
+  "180x180": [3, 4, 5, 6, 8, 10],
+  "200x200": [3, 4, 5, 6, 8, 10]
+};
+
+const kleurData = [
+  { code: "1", naam: "Blauw", kleur: "#2563eb", text: "white" },
+  { code: "2", naam: "Bruin", kleur: "#8b5a2b", text: "white" },
+  { code: "3", naam: "Geel", kleur: "#eab308", text: "#0f172a" },
+  { code: "4", naam: "Gegalvaniseerd", kleur: "#9ca3af", text: "#0f172a" },
+  { code: "5", naam: "Gemenied", kleur: "#7f1d1d", text: "white" },
+  { code: "6", naam: "Grijs", kleur: "#6b7280", text: "white" },
+  { code: "7", naam: "Groen", kleur: "#16a34a", text: "white" },
+  { code: "8", naam: "Lichte corrosie", kleur: "#b45309", text: "white" },
+  { code: "9", naam: "Onbehandeld", kleur: "#d1d5db", text: "#0f172a" },
+  { code: "10", naam: "Oranje", kleur: "#ff7a00", text: "white" },
+  { code: "11", naam: "Rood", kleur: "#dc2626", text: "white" },
+  { code: "12", naam: "Roze", kleur: "#ec4899", text: "white" },
+  { code: "13", naam: "Wit", kleur: "#ffffff", text: "#0f172a", border: "1px solid #cbd5e1" },
+  { code: "14", naam: "Zwart", kleur: "#000000", text: "white" }
+];
+
+function getArticleCode(type, size, lengthMm, colorCode) {
+  const length = Number(lengthMm);
+  if (!type || !size || !length || length <= 0 || !colorCode) return "";
+
+  const baseMaps = {
+    HEA: {
+      "100": "24010110096", "120": "240102120110", "140": "240103140135",
+      "160": "240104160155", "180": "240105180175", "200": "240106200195",
+      "220": "240107220215", "240": "240108240235", "260": "240109260255",
+      "280": "240110280275", "300": "240111300295", "320": "240112320300",
+      "340": "240113340300"
+    },
+    HEB: {
+      "100": "240202100100", "120": "240203120120", "140": "240204140140",
+      "160": "240205160160", "180": "240206180180", "200": "240207200200",
+      "220": "240208220220", "240": "240209240240", "260": "240210260260",
+      "280": "240211280280", "300": "240212300300", "320": "240213320300",
+      "340": "240214340300"
+    },
+    IPE: {
+      "100": "24040210050", "120": "24040312060", "140": "24040414070",
+      "160": "24040516080", "180": "24040618090", "200": "240407200100",
+      "220": "240408220110", "240": "240409240120", "270": "240410270135",
+      "300": "240411300150", "330": "240412330165", "360": "240413360180",
+      "400": "240414400200"
+    },
+    UNP: {
+      "100": "24050210050", "120": "24050312060", "140": "24050414070",
+      "160": "24050516080", "180": "24050618090", "200": "240507200100",
+      "220": "240508220110", "240": "240509240120", "260": "240510260130",
+      "280": "240511280140", "300": "240512300150", "330": "240513300165"
     }
   };
 
-  if (loggedIn) {
-    return (
-      <div style={styles.dashboard}>
-        <h1>Welkom 👋</h1>
-        <p>Je bent ingelogd in de staaltool</p>
-      </div>
-    );
-  }
+  if (!baseMaps[type]) return "";
+  const base = baseMaps[type][String(size)];
+  if (!base) return "";
 
-  return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        
-        <img src="/logo.png" alt="logo" style={styles.logo} />
+  const code = base + String(length) + "9" + String(colorCode);
+  const pos9 = code.length - String(colorCode).length - 1;
+  const lengteEinde = code.slice(pos9 - 2, pos9);
 
-        <h2 style={styles.title}>LOGIN</h2>
-
-        <input
-          type="text"
-          placeholder="Gebruikersnaam"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          style={styles.input}
-        />
-
-        <input
-          type="password"
-          placeholder="Wachtwoord"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-        />
-
-        <button onClick={handleLogin} style={styles.button}>
-          Inloggen
-        </button>
-
-        {error && <p style={styles.error}>{error}</p>}
-      </div>
-    </div>
-  );
-}
-
-const styles = {
-  container: {
-    height: "100vh",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
-  },
-  card: {
-    background: "#fff",
-    padding: "40px",
-    borderRadius: "16px",
-    width: "320px",
-    textAlign: "center",
-    boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
-  },
-  logo: {
-    width: "160px",
-    marginBottom: "20px",
-  },
-
-  // 🔥 LOGIN STIJL (logo look)
-  title: {
-    marginBottom: "25px",
-    fontFamily: "'Oswald', sans-serif",
-    fontWeight: "700",
-    letterSpacing: "6px",
-    fontSize: "34px",
-    color: "#ff7a00",
-    textTransform: "uppercase",
-  },
-
-  input: {
-    width: "100%",
-    padding: "12px",
-    marginBottom: "12px",
-    borderRadius: "8px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-  },
-
-  button: {
-    width: "100%",
-    padding: "12px",
-    background: "#ff7a00",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "600",
-    fontSize: "15px",
-  },
-
-  error: {
-    color: "red",
-    marginTop: "10px",
-  },
-
-  dashboard: {
-    height: "100vh",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-};
+  if (!(lengteEinde === "00" || lengteEinde === "50")) return "";
