@@ -464,14 +464,14 @@ export default function App() {
           <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
 
           <div style={styles.menuGrid}>
-            <button style={styles.moduleButton} onClick={() => chooseModule("Artikel PICKER")}>
-              <span style={styles.moduleTitle}>Artikel PICKER</span>
-              <span style={styles.moduleText}>Artikelen samenstellen</span>
-            </button>
-
             <button style={styles.moduleButton} onClick={() => chooseModule("Artikelzoeker")}>
               <span style={styles.moduleTitle}>Artikelzoeker</span>
               <span style={styles.moduleText}>Artikelen zoeken of scannen</span>
+            </button>
+
+            <button style={styles.moduleButton} onClick={() => chooseModule("Artikel PICKER")}>
+              <span style={styles.moduleTitle}>Artikel PICKER</span>
+              <span style={styles.moduleText}>Artikelen samenstellen</span>
             </button>
           </div>
 
