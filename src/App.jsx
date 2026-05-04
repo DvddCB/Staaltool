@@ -1,9 +1,9 @@
 import { useState } from "react";
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [loggedIn, setLoggedIn] = useState(false);
   const [error, setError] = useState("");
 
   const handleLogin = () => {
@@ -12,40 +12,17 @@ export default function App() {
       password === "Houthandel18"
     ) {
       setLoggedIn(true);
+      setError("");
     } else {
-      setError("Onjuiste login gegevens");
+      setError("Onjuiste gegevens");
     }
   };
 
-  if (!loggedIn) {
+  if (loggedIn) {
     return (
-      <div style={styles.container}>
-        <div style={styles.card}>
-          <img src="/logo.png" alt="logo" style={styles.logo} />
-
-          <h2 style={styles.title}>Login</h2>
-
-          <input
-            style={styles.input}
-            placeholder="Gebruikersnaam"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-
-          <input
-            style={styles.input}
-            type="password"
-            placeholder="Wachtwoord"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button style={styles.button} onClick={handleLogin}>
-            Inloggen
-          </button>
-
-          {error && <p style={styles.error}>{error}</p>}
-        </div>
+      <div style={styles.dashboard}>
+        <h1>Welkom 👋</h1>
+        <p>Je bent ingelogd!</p>
       </div>
     );
   }
@@ -53,8 +30,37 @@ export default function App() {
   return (
     <div style={styles.container}>
       <div style={styles.card}>
-        <h1>Welkom 👋</h1>
-        <p>Je bent ingelogd in de staaltool</p>
+        
+        {/* LOGO */}
+        <img
+          src="/logo.png"
+          alt="logo"
+          style={styles.logo}
+        />
+
+        <h2 style={styles.title}>Login</h2>
+
+        <input
+          type="text"
+          placeholder="Gebruikersnaam"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          style={styles.input}
+        />
+
+        <input
+          type="password"
+          placeholder="Wachtwoord"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={styles.input}
+        />
+
+        <button onClick={handleLogin} style={styles.button}>
+          Inloggen
+        </button>
+
+        {error && <p style={styles.error}>{error}</p>}
       </div>
     </div>
   );
@@ -69,8 +75,8 @@ const styles = {
     background: "linear-gradient(135deg, #1e3c72, #2a5298)",
   },
   card: {
-    background: "white",
-    padding: "40px",
+    background: "#fff",
+    padding: "30px",
     borderRadius: "12px",
     width: "320px",
     textAlign: "center",
@@ -78,7 +84,7 @@ const styles = {
   },
   logo: {
     width: "120px",
-    marginBottom: "20px",
+    marginBottom: "15px",
   },
   title: {
     marginBottom: "20px",
@@ -94,7 +100,7 @@ const styles = {
     width: "100%",
     padding: "10px",
     background: "#2a5298",
-    color: "white",
+    color: "#fff",
     border: "none",
     borderRadius: "6px",
     cursor: "pointer",
@@ -102,5 +108,12 @@ const styles = {
   error: {
     color: "red",
     marginTop: "10px",
+  },
+  dashboard: {
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
   },
 };
