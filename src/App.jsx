@@ -192,6 +192,7 @@ function BarcodeView({ value }) {
 
 export default function App() {
   const controlsRef = useRef(null);
+  const scanLockRef = useRef(false);
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [selectedModule, setSelectedModule] = useState("");
@@ -266,6 +267,7 @@ export default function App() {
       controlsRef.current.stop();
       controlsRef.current = null;
     }
+    scanLockRef.current = false;
     setScanning(false);
   }
 
@@ -484,6 +486,10 @@ export default function App() {
     setScanResult("");
     setScanError("");
     setSearchError("");
+
+    if (scanning) return;
+
+    scanLockRef.current = false;
     setScanning(true);
 
     try {
@@ -492,39 +498,48 @@ export default function App() {
       const controls = await reader.decodeFromConstraints(
         {
           video: {
-            facingMode: "environment",
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
           }
         },
         "video-preview",
         (result) => {
-          if (result) {
-            const text = result.getText();
-            setScanResult(text);
+          if (!result) return;
 
-            const found = selectedModule === "Artikelzoeker"
-              ? addCodeToPickbon(text)
-              : fillArticleFromCode(text);
+          if (scanLockRef.current) return;
+          scanLockRef.current = true;
 
-            if (!found) {
-              setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
-            }
+          const text = result.getText();
+          setScanResult(text);
 
-            if (controlsRef.current) {
-              controlsRef.current.stop();
-              controlsRef.current = null;
-            }
+          const found = selectedModule === "Artikelzoeker"
+            ? addCodeToPickbon(text)
+            : fillArticleFromCode(text);
 
-            setScanning(false);
+          if (!found) {
+            setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
           }
+
+          if (controlsRef.current) {
+            controlsRef.current.stop();
+            controlsRef.current = null;
+          }
+
+          setScanning(false);
+
+          window.setTimeout(() => {
+            scanLockRef.current = false;
+          }, 800);
         }
       );
 
       controlsRef.current = controls;
     } catch (err) {
+      console.error(err);
+      scanLockRef.current = false;
       setScanning(false);
-      setScanError("Camera kon niet worden gestart. Controleer cameratoegang en probeer opnieuw.");
+      setScanError("Camera kon niet worden gestart. Gebruik Chrome en geef cameratoegang.");
     }
   }
 
@@ -611,7 +626,13 @@ export default function App() {
 
         {scanning && (
           <div style={styles.scannerPanel}>
-            <video id="video-preview" style={styles.videoPreview}></video>
+            <video
+              id="video-preview"
+              style={styles.videoPreview}
+              autoPlay
+              muted
+              playsInline
+            ></video>
             <button style={styles.stopButton} onClick={stopScanner}>Scanner stoppen</button>
           </div>
         )}
