@@ -515,6 +515,11 @@ function extractLogic4CustomerName(rawText, cleanText) {
     .map((line) => line.trim())
     .filter(Boolean);
 
+  // Klantnaam mag alleen de eerste regel/waarde na "Voor:" zijn.
+  // Voorbeelden die goed gaan:
+  // "Voor:" + volgende regel "Balie" => Balie
+  // "Voor : Balie" => Balie
+  // OCR-regel "Voor : Balie eentweedrie 1 ..." => Balie
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
 
@@ -522,14 +527,15 @@ function extractLogic4CustomerName(rawText, cleanText) {
       return cleanLogic4CustomerLine(lines[index + 1] || "");
     }
 
-    const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
+    const sameLineMatch = line.match(/^Voor\s*:?\s*(.+)$/i);
     if (sameLineMatch?.[1]?.trim()) {
       return cleanLogic4CustomerLine(sameLineMatch[1]);
     }
   }
 
-  const fallbackMatch = String(cleanText || "").match(/Voor\s*:\s*(.+)$/i);
-  return cleanLogic4CustomerLine(fallbackMatch?.[1] || "");
+  const compact = String(cleanText || "");
+  const compactMatch = compact.match(/Voor\s*:?\s*([A-Za-zÀ-ÿ0-9.'-]+)/i);
+  return cleanLogic4CustomerLine(compactMatch?.[1] || "");
 }
 
 function cleanLogic4CustomerLine(value) {
@@ -553,15 +559,14 @@ function cleanLogic4CustomerLine(value) {
     .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
     .trim();
 
+  // Zodra adres/straat/nummer achter klantnaam komt, alleen het eerste klant-blok houden.
   const beforeAddress = text.match(/^(.+?)\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9.'-]*\s+\d+\b/);
   if (beforeAddress?.[1]) text = beforeAddress[1].trim();
 
-  if (text.includes(" ")) {
-    const firstWord = text.split(" ")[0].trim();
-    if (firstWord) return firstWord;
-  }
-
-  return text;
+  // Voor jullie pickbon: klantnaam is alleen de eerste waarde na Voor:
+  // Daardoor wordt "Balie eentweedrie 1 ..." netjes "Balie".
+  const firstValue = text.split(/\s+/)[0]?.trim() || "";
+  return firstValue;
 }
 
 function parseLogic4PickbonTextToOrder(text, fileName) {
@@ -664,6 +669,30 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     }
   }
 
+  // 4. Extra fallback voor scan/OCR layout zoals voorbeeld 3009096.pdf:
+  // Art.nr kan als "24010110096300" op de eerste regel staan en "091" op de volgende regel.
+  // De omschrijving staat ernaast en "Nu te picken" bevat het aantal.
+  if (!articleRows.length) {
+    for (let index = 0; index < lines.length; index++) {
+      const windowText = lines.slice(index, index + 8).join(" ").replace(/\s+/g, " ");
+
+      const splitCodeMatch =
+        windowText.match(/\b(24\d{9,14})\D{0,20}(0?9\d{1,2})\b/) ||
+        windowText.match(/\b(24\d{9,14})\D{0,20}(\d{2,4})\b/);
+
+      if (splitCodeMatch) {
+        const combinedCode = `${splitCodeMatch[1]}${splitCodeMatch[2]}`;
+        const afterDescription = windowText.match(/\b(?:Nu\s*te\s*picken|picken)\D*(\d{1,2})\b/i);
+        const allSmallNumbers = (windowText.match(/\b\d{1,2}\b/g) || [])
+          .map(Number)
+          .filter((value) => value > 0 && value <= 99);
+
+        const quantity = Number(afterDescription?.[1] || allSmallNumbers[allSmallNumbers.length - 1] || 1);
+        addArticleRow(combinedCode, quantity, windowText);
+      }
+    }
+  }
+
   const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
   const orderId = orderMatch?.[1] || pickbonMatch?.[1] || fallbackId;
   const klant = customerName || (klantnummerMatch?.[1] ? `Klantnummer ${klantnummerMatch[1]}` : "Logic4 PDF pickbon");
@@ -713,7 +742,7 @@ async function readPdfTextWithOcr(pdf) {
 
     await page.render({ canvasContext: context, viewport }).promise;
 
-    const result = await Tesseract.recognize(canvas, "nld+eng");
+    const result = await Tesseract.recognize(canvas, "eng");
     pageTexts.push(result?.data?.text || "");
   }
 
@@ -953,7 +982,7 @@ export default function App() {
       if (!order.rows.length) {
         console.log("PDF tekst/OCR tekst:", fullText);
         setPdfUploadMessage("");
-        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Open de browser-console om de OCR tekst te controleren.");
+        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Controleer of de PDF lijkt op de Logic4 pickbon of stuur de OCR tekst/screenshot.");
         event.target.value = "";
         return;
       }
