@@ -941,6 +941,23 @@ export default function App() {
   useEffect(() => {
     if (!loggedIn) return;
 
+    const onFocusRefreshOrders = () => {
+      loadOrdersFromSupabase();
+    };
+
+    window.addEventListener("focus", onFocusRefreshOrders);
+    const refreshTimer = window.setInterval(loadOrdersFromSupabase, 30000);
+
+    return () => {
+      window.removeEventListener("focus", onFocusRefreshOrders);
+      window.clearInterval(refreshTimer);
+    };
+  }, [loggedIn]);
+
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
     window.history.replaceState({ staaltool: "start" }, "");
     window.history.pushState({ staaltool: "active" }, "");
 
@@ -1308,21 +1325,27 @@ export default function App() {
   function addOrderRowsToPickbon(orderNumber, rows) {
     setPickbonNumber(orderNumber || "Logic4 order");
     setPickbonLines(
-      rows.map((row, index) => ({
-        id: "logic4-" + Date.now() + "-" + index,
-        articleCode: row.articleCode,
-        description: row.description,
-        type: row.type || "",
-        size: row.size || "",
-        length: row.length || "",
-        colorCode: row.colorCode || "",
-        colorName: row.colorName || "",
-        quantity: row.quantity,
-        originalQuantity: row.quantity,
-        scannedQuantity: 0,
-        processed: false,
-        scannedAt: "-"
-      }))
+      rows.map((row, index) => {
+        const originalQuantity = Number(row.quantity || row.originalQuantity || 1);
+        const scannedQuantity = Number(row.scannedQuantity || 0);
+        const processed = Boolean(row.processed) || scannedQuantity >= originalQuantity;
+
+        return {
+          id: "logic4-" + Date.now() + "-" + index,
+          articleCode: row.articleCode,
+          description: row.description,
+          type: row.type || "",
+          size: row.size || "",
+          length: row.length || "",
+          colorCode: row.colorCode || "",
+          colorName: row.colorName || "",
+          quantity: Math.max(1, originalQuantity - scannedQuantity),
+          originalQuantity,
+          scannedQuantity,
+          processed,
+          scannedAt: row.scannedAt || "-"
+        };
+      })
     );
   }
 
@@ -1371,11 +1394,53 @@ export default function App() {
     setConfirmLineId(lineId);
   }
 
+  function persistCurrentOrderRows(nextLines, nextStatus = currentSelectedPickerOrder?.status) {
+    if (!currentSelectedPickerOrder?.id) return;
+
+    const nextRows = nextLines.map((line) => ({
+      articleCode: line.articleCode,
+      description: line.description,
+      type: line.type || "",
+      size: line.size || "",
+      length: line.length || "",
+      colorCode: line.colorCode || "",
+      colorName: line.colorName || "",
+      quantity: Number(line.originalQuantity || line.quantity || 1),
+      scannedQuantity: Number(line.scannedQuantity || 0),
+      processed: Boolean(line.processed)
+    }));
+
+    updateOrderInSupabase(currentSelectedPickerOrder.id, {
+      rows: nextRows,
+      regels: nextRows.length,
+      status: nextStatus || "Open"
+    }).catch((err) => {
+      console.error(err);
+      setSearchError("Verwerking kon niet worden opgeslagen in Supabase.");
+    });
+
+    setUploadedPdfOrders((currentOrders) =>
+      currentOrders.map((order) =>
+        order.id === currentSelectedPickerOrder.id
+          ? { ...order, rows: nextRows, regels: nextRows.length, status: nextStatus || order.status }
+          : order
+      )
+    );
+
+    setSelectedPickerOrder((currentOrder) =>
+      currentOrder?.id === currentSelectedPickerOrder.id
+        ? { ...currentOrder, rows: nextRows, regels: nextRows.length, status: nextStatus || currentOrder.status }
+        : currentOrder
+    );
+  }
+
   function confirmProcessLine() {
     if (!confirmLineId) return;
 
-    setPickbonLines((currentLines) =>
-      currentLines.map((line) => {
+    let nextLinesForSync = [];
+
+    setPickbonLines((currentLines) => {
+      const nextLines = currentLines.map((line) => {
         if (line.id !== confirmLineId) return line;
 
         const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
@@ -1393,8 +1458,27 @@ export default function App() {
           processed: nextPickedQuantity >= requestedQuantity,
           scannedAt: new Date().toLocaleString("nl-NL")
         };
-      })
-    );
+      });
+
+      nextLinesForSync = nextLines;
+      const allDone = nextLines.length > 0 && nextLines.every((line) => {
+        const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
+        const pickedQuantity = Number(line.scannedQuantity || 0);
+        return line.processed && pickedQuantity >= requestedQuantity;
+      });
+
+      persistCurrentOrderRows(nextLines, allDone ? "Gereed" : "Open");
+
+      if (allDone && currentSelectedPickerOrder?.id) {
+        setProcessedOrderIds((currentIds) =>
+          currentIds.includes(currentSelectedPickerOrder.id)
+            ? currentIds
+            : [...currentIds, currentSelectedPickerOrder.id]
+        );
+      }
+
+      return nextLines;
+    });
 
     setConfirmLineId(null);
   }
@@ -1417,8 +1501,31 @@ export default function App() {
     if (!selectedPickerOrder?.id || !confirmOrderAction) return;
 
     if (confirmOrderAction === "finish") {
+      const finishedLines = pickbonLines.map((line) => {
+        const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
+        return {
+          ...line,
+          quantity: requestedQuantity,
+          scannedQuantity: line.scannedQuantity !== undefined ? requestedQuantity : line.scannedQuantity,
+          processed: true,
+          scannedAt: new Date().toLocaleString("nl-NL")
+        };
+      });
+
+      persistCurrentOrderRows(finishedLines, "Gereed");
+
+      setPickbonLines(finishedLines);
+
       setProcessedOrderIds((currentIds) =>
-        currentIds.includes(selectedPickerOrder.id) ? currentIds : [...currentIds, selectedPickerOrder.id]
+        currentIds.includes(selectedPickerOrder.id)
+          ? currentIds
+          : [...currentIds, selectedPickerOrder.id]
+      );
+
+      setUploadedPdfOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === selectedPickerOrder.id ? { ...order, status: "Gereed" } : order
+        )
       );
 
       setSelectedPickerOrder((currentOrder) =>
@@ -1427,19 +1534,29 @@ export default function App() {
     }
 
     if (confirmOrderAction === "edit") {
-      setProcessedOrderIds((currentIds) => currentIds.filter((orderId) => orderId !== selectedPickerOrder.id));
+      const resetLines = pickbonLines.map((line) => ({
+        ...line,
+        processed: false,
+        scannedQuantity: line.scannedQuantity !== undefined ? 0 : line.scannedQuantity
+      }));
+
+      persistCurrentOrderRows(resetLines, "Open");
+
+      setProcessedOrderIds((currentIds) =>
+        currentIds.filter((orderId) => orderId !== selectedPickerOrder.id)
+      );
+
+      setUploadedPdfOrders((currentOrders) =>
+        currentOrders.map((order) =>
+          order.id === selectedPickerOrder.id ? { ...order, status: "Open" } : order
+        )
+      );
 
       setSelectedPickerOrder((currentOrder) =>
         currentOrder ? { ...currentOrder, status: "Open" } : currentOrder
       );
 
-      setPickbonLines((currentLines) =>
-        currentLines.map((line) => ({
-          ...line,
-          processed: false,
-          scannedQuantity: line.scannedQuantity !== undefined ? 0 : line.scannedQuantity
-        }))
-      );
+      setPickbonLines(resetLines);
     }
 
     setConfirmOrderAction(null);
