@@ -522,8 +522,8 @@ function extractLogic4CustomerName(rawText, cleanText) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  // Logic4 zet de klantnaam direct onder of achter "Voor:".
-  // We nemen bewust alleen de eerste bruikbare regel, niet het hele adresblok.
+  // Logic4: neem ALLEEN de regel achter/onder "Voor:".
+  // Dus niet het adresblok, telefoonnummer of volgende regels.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
 
@@ -533,23 +533,14 @@ function extractLogic4CustomerName(rawText, cleanText) {
     }
 
     if (/^Voor\s*:?\s*$/i.test(line)) {
-      const nextLine = lines[index + 1]?.trim() || "";
-
-      if (
-        nextLine &&
-        !/^(Pickbon|Klantnummer|Verzenddatum|Ordernummer|Orderdatum|Orderstatus|Referentie|Art\.?nr|Omschrijving)$/i.test(nextLine) &&
-        !/^\d{4,}$/.test(nextLine) &&
-        !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(nextLine)
-      ) {
-        return nextLine;
-      }
+      return lines[index + 1]?.trim() || "";
     }
   }
 
-  // Fallback voor tekst die door OCR op 1 regel is gezet:
-  // pak alleen tot aan het volgende bekende veld.
+  // Fallback als OCR alles op één regel zet:
+  // pak alleen het eerste woord/blok na Voor: tot aan dubbele spatie of bekend veld.
   const fallbackMatch = String(cleanText || "").match(
-    /Voor\s*:\s*(.*?)(?:\s+Klantnummer|\s+Verzenddatum|\s+Ordernummer|\s+Orderdatum|\s+Orderstatus|\s+Referentie|\s+Art\.?nr|\s+Omschrijving|$)/i
+    /Voor\s*:\s*(.*?)(?:\s{2,}|\s+Klantnummer|\s+Verzenddatum|\s+Ordernummer|\s+Orderdatum|\s+Orderstatus|\s+Referentie|\s+Art\.?nr|\s+Omschrijving|$)/i
   );
 
   return fallbackMatch?.[1]?.trim() || "";
