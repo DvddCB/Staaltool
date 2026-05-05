@@ -722,19 +722,16 @@ export default function App() {
   const effectivePickerOrders = useMemo(() => {
     const adminDemoOrders = getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id));
 
-    // De beheerder is leidend:
-    // - Beheerder ziet demo/testorders + alle door beheerder geuploade/ingeplande PDF-orders.
-    // - Gebruiker1 ziet alleen de echte beheerder-orders uit dezelfde centrale lokale lijst.
-    //   Zo krijgt Gebruiker1 geen eigen of afwijkende demo-lijst.
-    const datedPickerOrders = isAdmin
-      ? [...adminDemoOrders, ...uploadedPdfOrders]
-      : [...uploadedPdfOrders];
+    // Beide accounts zien dezelfde orderlijst en planning.
+    // De beheerder bepaalt de lijst door orders te uploaden, in te plannen of te verwijderen.
+    // Gebruiker1 mag dezelfde lijst verwerken, maar niet uploaden, datums wijzigen of orders verwijderen.
+    const datedPickerOrders = [...adminDemoOrders, ...uploadedPdfOrders];
 
     return datedPickerOrders.map((order) => ({
       ...order,
       status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
     }));
-  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds, isAdmin]);
+  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds]);
 
   const allPickerOrdersSorted = effectivePickerOrders
     .slice()
