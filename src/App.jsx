@@ -190,11 +190,123 @@ function BarcodeView({ value }) {
   );
 }
 
+
 function getModuleDisplayName(moduleName) {
   if (moduleName === "Artikelzoeker") return "Artikel Picker";
   if (moduleName === "Artikel PICKER") return "Artikel Zoeker";
   return moduleName;
 }
+
+const demoPickerOrders = [
+  {
+    id: "ORD-10482",
+    klant: "Bouwbedrijf De Vries",
+    tijd: "08:30",
+    status: "Open",
+    regels: 6,
+    kleur: "#f97316",
+    rows: [
+      {
+        articleCode: "24010110096300092",
+        description: "HEA 100 - 3000 mm - 2. Bruin",
+        type: "HEA",
+        size: "100",
+        length: 3000,
+        colorCode: "2",
+        colorName: "Bruin",
+        quantity: 2
+      },
+      {
+        articleCode: "240402100504000914",
+        description: "IPE 100 - 4000 mm - 14. Zwart",
+        type: "IPE",
+        size: "100",
+        length: 4000,
+        colorCode: "14",
+        colorName: "Zwart",
+        quantity: 1
+      }
+    ]
+  },
+  {
+    id: "ORD-10483",
+    klant: "Jansen Constructie",
+    tijd: "10:00",
+    status: "Bezig",
+    regels: 12,
+    kleur: "#2563eb",
+    rows: [
+      {
+        articleCode: "2402021001003500911",
+        description: "HEB 100 - 3500 mm - 11. Rood",
+        type: "HEB",
+        size: "100",
+        length: 3500,
+        colorCode: "11",
+        colorName: "Rood",
+        quantity: 1
+      },
+      {
+        articleCode: "24050210050450091",
+        description: "UNP 100 - 4500 mm - 1. Blauw",
+        type: "UNP",
+        size: "100",
+        length: 4500,
+        colorCode: "1",
+        colorName: "Blauw",
+        quantity: 2
+      }
+    ]
+  },
+  {
+    id: "ORD-10484",
+    klant: "Circulair Project Noord",
+    tijd: "12:45",
+    status: "Open",
+    regels: 4,
+    kleur: "#16a34a",
+    rows: [
+      {
+        articleCode: "240103140135300097",
+        description: "HEA 140 - 3000 mm - 7. Groen",
+        type: "HEA",
+        size: "140",
+        length: 3000,
+        colorCode: "7",
+        colorName: "Groen",
+        quantity: 1
+      }
+    ]
+  },
+  {
+    id: "ORD-10485",
+    klant: "Van Dijk Montage",
+    tijd: "15:15",
+    status: "Gereed",
+    regels: 9,
+    kleur: "#64748b",
+    rows: [
+      {
+        articleCode: "2404113001506000914",
+        description: "IPE 300 - 6000 mm - 14. Zwart",
+        type: "IPE",
+        size: "300",
+        length: 6000,
+        colorCode: "14",
+        colorName: "Zwart",
+        quantity: 1
+      }
+    ]
+  }
+];
+
+const demoPickerDays = [
+  { dag: "Ma", datum: "6", orders: 2 },
+  { dag: "Di", datum: "7", orders: 4 },
+  { dag: "Wo", datum: "8", orders: 1 },
+  { dag: "Do", datum: "9", orders: 3 },
+  { dag: "Vr", datum: "10", orders: 5 }
+];
 
 export default function App() {
   const controlsRef = useRef(null);
@@ -202,6 +314,9 @@ export default function App() {
 
   const [loggedIn, setLoggedIn] = useState(false);
   const [selectedModule, setSelectedModule] = useState("");
+  const [pickerView, setPickerView] = useState("home");
+  const [selectedPickerOrder, setSelectedPickerOrder] = useState(demoPickerOrders[1]);
+  const [pickerOrderQuery, setPickerOrderQuery] = useState("");
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -295,12 +410,21 @@ export default function App() {
   function goToMenu() {
     stopScanner();
     setSelectedModule("");
+    setPickerView("home");
     clearTool("types");
   }
 
   function chooseModule(moduleName) {
     setSelectedModule(moduleName);
-    clearTool(moduleName === "Artikelzoeker" ? "search" : "types");
+
+    if (moduleName === "Artikelzoeker") {
+      setPickerView("home");
+      clearTool("search");
+      return;
+    }
+
+    setPickerView("home");
+    clearTool("types");
   }
 
   function chooseType(nextType) {
@@ -598,6 +722,27 @@ export default function App() {
     }
   }
 
+  function openPickerOrder(order) {
+    setSelectedPickerOrder(order);
+    setPickerView("pickbon");
+
+    if (order?.rows?.length) {
+      addOrderRowsToPickbon(order.id, order.rows);
+    } else {
+      setPickbonNumber(order?.id || "");
+    }
+
+    setLogic4Message("");
+    setSearchError("");
+  }
+
+  function backToPickerPlanning() {
+    setPickerView("home");
+    setScanResult("");
+    setScanError("");
+    setSearchError("");
+  }
+
   async function startScanner() {
     setScanResult("");
     setScanError("");
@@ -756,16 +901,135 @@ export default function App() {
         {scanError && <div style={styles.scanError}>{scanError}</div>}
         {searchError && <div style={styles.scanError}>{searchError}</div>}
 
-        {selectedModule === "Artikelzoeker" && step !== "result" ? (
+        {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
+          <section style={styles.pickerLayout}>
+            <aside style={styles.orderListPanel}>
+              <div style={styles.pickerPanelHeader}>
+                <div>
+                  <p style={styles.label}>Vandaag</p>
+                  <h2 style={styles.sectionTitle}>Orderlijst</h2>
+                </div>
+                <span style={styles.orderCountBadge}>{demoPickerOrders.length} orders</span>
+              </div>
+
+              <input
+                style={styles.searchInput}
+                value={pickerOrderQuery}
+                onChange={(e) => setPickerOrderQuery(e.target.value)}
+                placeholder="Zoek order, klant of artikel..."
+              />
+
+              <div style={styles.orderList}>
+                {demoPickerOrders
+                  .filter((order) =>
+                    (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+                  )
+                  .map((order) => (
+                    <button
+                      key={order.id}
+                      style={
+                        selectedPickerOrder?.id === order.id
+                          ? styles.orderCardActive
+                          : styles.orderCard
+                      }
+                      onClick={() => setSelectedPickerOrder(order)}
+                    >
+                      <div style={styles.orderCardTop}>
+                        <div>
+                          <p style={styles.orderNumber}>{order.id}</p>
+                          <p style={styles.orderCustomer}>{order.klant}</p>
+                        </div>
+                        <span style={{ ...styles.orderStatus, background: order.kleur }}>
+                          {order.status}
+                        </span>
+                      </div>
+
+                      <div style={styles.orderMeta}>
+                        <span>{order.tijd}</span>
+                        <span>{order.regels} regels</span>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            </aside>
+
+            <main style={styles.agendaPanel}>
+              <section style={styles.panel}>
+                <div style={styles.pickerPanelHeader}>
+                  <div>
+                    <p style={styles.label}>Planning</p>
+                    <h2 style={styles.sectionTitle}>Visuele agenda</h2>
+                  </div>
+
+                  <div style={styles.agendaToggle}>
+                    <button style={styles.smallDarkButton}>Week</button>
+                    <button style={styles.smallLightButton}>Dag</button>
+                  </div>
+                </div>
+
+                <div style={styles.calendarGrid}>
+                  {demoPickerDays.map((day, index) => (
+                    <div
+                      key={day.datum}
+                      style={index === 1 ? styles.calendarDayActive : styles.calendarDay}
+                    >
+                      <div style={styles.calendarDayHeader}>
+                        <div>
+                          <p style={styles.calendarDayName}>{day.dag}</p>
+                          <p style={styles.calendarDate}>{day.datum}</p>
+                        </div>
+                        <span style={styles.calendarCount}>{day.orders}</span>
+                      </div>
+
+                      {index === 1 &&
+                        demoPickerOrders.map((order) => (
+                          <button
+                            key={order.id}
+                            style={{ ...styles.calendarOrder, background: order.kleur }}
+                            onClick={() => setSelectedPickerOrder(order)}
+                          >
+                            <span style={styles.calendarOrderTime}>{order.tijd}</span>
+                            <strong>{order.id}</strong>
+                          </button>
+                        ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section style={styles.selectedOrderPanel}>
+                <p style={styles.selectedOrderLabel}>Geselecteerde order</p>
+                <div style={styles.selectedOrderContent}>
+                  <div>
+                    <h2 style={styles.selectedOrderTitle}>{selectedPickerOrder?.id}</h2>
+                    <p style={styles.selectedOrderCustomer}>{selectedPickerOrder?.klant}</p>
+                    <p style={styles.selectedOrderMeta}>
+                      Tijd: {selectedPickerOrder?.tijd} · Regels: {selectedPickerOrder?.regels} · Status: {selectedPickerOrder?.status}
+                    </p>
+                  </div>
+
+                  <button style={styles.openPickbonButton} onClick={() => openPickerOrder(selectedPickerOrder)}>
+                    Pickbon openen
+                  </button>
+                </div>
+              </section>
+            </main>
+          </section>
+        ) : selectedModule === "Artikelzoeker" && step !== "result" ? (
           <>
             <div style={styles.steps}>
               <div style={styles.activeStep}>1. Zoeken</div>
               <div style={styles.step}>2. Resultaat</div>
             </div>
 
-            <button style={styles.backButton} onClick={goToMenu}>
-              Terug naar menu
-            </button>
+            <div style={styles.pickerBackRow}>
+              <button style={styles.backButton} onClick={backToPickerPlanning}>
+                Terug naar planning
+              </button>
+              <button style={styles.backButton} onClick={goToMenu}>
+                Terug naar menu
+              </button>
+            </div>
 
             <section style={styles.twoColumn}>
               <div style={styles.panel}>
@@ -1683,5 +1947,226 @@ const styles = {
     padding: 10,
     marginTop: 10,
     fontWeight: 700
-  }
+  },
+  pickerLayout: {
+    display: "grid",
+    gridTemplateColumns: "380px 1fr",
+    gap: 14,
+    alignItems: "start"
+  },
+  orderListPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 16,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)"
+  },
+  agendaPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 14
+  },
+  pickerPanelHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12
+  },
+  orderCountBadge: {
+    background: "#dbeafe",
+    color: "#1234aa",
+    borderRadius: 999,
+    padding: "7px 11px",
+    fontWeight: 900,
+    fontSize: 13
+  },
+  orderList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    marginTop: 12
+  },
+  orderCard: {
+    width: "100%",
+    background: "white",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  orderCardActive: {
+    width: "100%",
+    background: "#eff6ff",
+    border: "1px solid #1234aa",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(18,52,170,0.12)"
+  },
+  orderCardTop: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10
+  },
+  orderNumber: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 19,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  orderCustomer: {
+    margin: "5px 0 0",
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: 800
+  },
+  orderStatus: {
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  orderMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+    color: "#64748b",
+    fontSize: 13,
+    marginTop: 12
+  },
+  agendaToggle: {
+    display: "flex",
+    gap: 8
+  },
+  smallLightButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#f1f5f9",
+    color: "#334155",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 10
+  },
+  calendarDay: {
+    minHeight: 210,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 12
+  },
+  calendarDayActive: {
+    minHeight: 210,
+    background: "#eff6ff",
+    border: "1px solid #1234aa",
+    borderRadius: 16,
+    padding: 12
+  },
+  calendarDayHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10
+  },
+  calendarDayName: {
+    margin: 0,
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  calendarDate: {
+    margin: "3px 0 0",
+    color: "#1234aa",
+    fontSize: 28,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  calendarCount: {
+    background: "white",
+    color: "#475569",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  calendarOrder: {
+    width: "100%",
+    border: "none",
+    borderRadius: 12,
+    color: "white",
+    padding: 10,
+    textAlign: "left",
+    cursor: "pointer",
+    marginBottom: 8,
+    boxShadow: "0 6px 14px rgba(15,23,42,0.14)"
+  },
+  calendarOrderTime: {
+    display: "block",
+    fontSize: 12,
+    opacity: 0.9,
+    marginBottom: 2
+  },
+  selectedOrderPanel: {
+    background: "#1234aa",
+    color: "white",
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  selectedOrderLabel: {
+    margin: 0,
+    color: "#dbeafe",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: 900
+  },
+  selectedOrderContent: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+    marginTop: 8
+  },
+  selectedOrderTitle: {
+    margin: 0,
+    color: "white",
+    fontSize: 34,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  selectedOrderCustomer: {
+    margin: "4px 0 0",
+    color: "#dbeafe",
+    fontSize: 16
+  },
+  selectedOrderMeta: {
+    margin: "9px 0 0",
+    color: "#dbeafe",
+    fontSize: 14
+  },
+  openPickbonButton: {
+    border: "none",
+    borderRadius: 14,
+    background: "#ff7a00",
+    color: "white",
+    padding: "14px 18px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  pickerBackRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
 };
