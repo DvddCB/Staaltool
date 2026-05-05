@@ -1423,7 +1423,7 @@ export default function App() {
     setConfirmRemoveOrderId(null);
   }
 
-  function updateUploadedOrderDate(orderId, nextDate) {
+  function updateUploadedOrderDate(orderId, nextDate, options = {}) {
     if (!orderId || !nextDate) return;
 
     setUploadedPdfOrders((currentOrders) =>
@@ -1437,6 +1437,11 @@ export default function App() {
     );
 
     setPickerWeekStart(startOfWeek(new Date(`${nextDate}T00:00:00`)));
+
+    if (options.clearUploadDatePicker) {
+      setLastUploadedOrderId("");
+      setPdfUploadMessage(`Plandatum ingesteld voor order ${orderId}.`);
+    }
   }
 
   function removePickbonLine(lineId) {
@@ -1897,7 +1902,11 @@ export default function App() {
                         uploadedPdfOrders.find((order) => order.id === lastUploadedOrderId)?.plannedDate ||
                         toIsoDate(new Date())
                       }
-                      onChange={(event) => updateUploadedOrderDate(lastUploadedOrderId, event.target.value)}
+                      onChange={(event) =>
+                        updateUploadedOrderDate(lastUploadedOrderId, event.target.value, {
+                          clearUploadDatePicker: true
+                        })
+                      }
                     />
                   </div>
                 )}
