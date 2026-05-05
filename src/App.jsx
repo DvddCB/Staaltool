@@ -819,12 +819,21 @@ export default function App() {
   }
 
   function updatePickbonQuantity(lineId, nextQuantity) {
-    const quantity = Math.max(1, Number(nextQuantity) || 1);
-
     setPickbonLines((currentLines) =>
-      currentLines.map((line) =>
-        line.id === lineId ? { ...line, quantity } : line
-      )
+      currentLines.map((line) => {
+        if (line.id !== lineId) return line;
+
+        const requestedQuantity = Number(line.quantity || 1);
+        const quantity = Math.max(1, Number(nextQuantity) || 1);
+
+        // Bij orderregels mag het aantal nooit hoger worden dan gevraagd.
+        // Dit voorkomt dat 1 gevraagd artikel per ongeluk meerdere keren wordt gemaakt.
+        const safeQuantity = line.scannedQuantity !== undefined
+          ? Math.min(quantity, requestedQuantity)
+          : quantity;
+
+        return { ...line, quantity: safeQuantity };
+      })
     );
   }
 
@@ -1518,8 +1527,7 @@ export default function App() {
           </section>
         ) : selectedModule === "Artikelzoeker" && step !== "result" ? (
           <>
-            <div style={styles.steps}>
-              <div style={styles.activeStep}>1. Zoeken</div>
+            
               <div style={styles.step}>2. Resultaat</div>
             </div>
 
@@ -1601,11 +1609,12 @@ export default function App() {
                             style={styles.qtyInput}
                             type="number"
                             min="1"
+                            max={line.scannedQuantity !== undefined ? line.quantity : undefined}
                             value={line.quantity}
                             onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                           />
 
-                          {!line.processed && (
+                          {!line.processed && Number(line.scannedQuantity || 0) < Number(line.quantity || 1) && (
                             <button style={styles.smallScanButton} onClick={startScanner}>
                               Scan
                             </button>
@@ -1615,9 +1624,13 @@ export default function App() {
                             <button style={styles.smallDoneButton} onClick={() => togglePickbonProcessed(line.id)}>
                               ✓ Verwerkt
                             </button>
-                          ) : (
+                          ) : Number(line.scannedQuantity || 0) < Number(line.quantity || 1) ? (
                             <button style={styles.smallDarkButton} onClick={() => requestProcessLine(line.id)}>
                               Verwerken
+                            </button>
+                          ) : (
+                            <button style={styles.smallDoneButton}>
+                              ✓ Compleet
                             </button>
                           )}
 
