@@ -522,28 +522,42 @@ function extractLogic4CustomerName(rawText, cleanText) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  // Logic4: neem ALLEEN de regel achter/onder "Voor:".
-  // Dus niet het adresblok, telefoonnummer of volgende regels.
+  // 1. Ideaal geval: "Voor:" staat op aparte regel.
+  // Neem dan exact de eerstvolgende regel en stop direct.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
-
-    const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
-    if (sameLineMatch?.[1]?.trim()) {
-      return sameLineMatch[1].trim();
-    }
 
     if (/^Voor\s*:?\s*$/i.test(line)) {
       return lines[index + 1]?.trim() || "";
     }
+
+    const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
+    if (sameLineMatch?.[1]?.trim()) {
+      return cleanLogic4CustomerLine(sameLineMatch[1]);
+    }
   }
 
-  // Fallback als OCR alles op één regel zet:
-  // pak alleen het eerste woord/blok na Voor: tot aan dubbele spatie of bekend veld.
+  // 2. OCR fallback: alles staat soms op 1 lange regel.
+  // Pak alleen het stuk direct na "Voor:" tot aan een duidelijk volgend veld/adres/telefoon.
   const fallbackMatch = String(cleanText || "").match(
-    /Voor\s*:\s*(.*?)(?:\s{2,}|\s+Klantnummer|\s+Verzenddatum|\s+Ordernummer|\s+Orderdatum|\s+Orderstatus|\s+Referentie|\s+Art\.?nr|\s+Omschrijving|$)/i
+    /Voor\s*:\s*(.*?)(?:\s+\d{4}\s?[A-Z]{2}\b|\s+\d{2}[-\s]?\d{8}\b|\s+Klantnummer\b|\s+Verzenddatum\b|\s+Ordernummer\b|\s+Orderdatum\b|\s+Orderstatus\b|\s+Referentie\b|\s+Art\.?nr\b|\s+Omschrijving\b|$)/i
   );
 
-  return fallbackMatch?.[1]?.trim() || "";
+  return cleanLogic4CustomerLine(fallbackMatch?.[1] || "");
+}
+
+function cleanLogic4CustomerLine(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .replace(/\b\d{4}\s?[A-Z]{2}\b.*$/i, "")
+    .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
+    .replace(/\bKlantnummer\b.*$/i, "")
+    .replace(/\bVerzenddatum\b.*$/i, "")
+    .replace(/\bOrdernummer\b.*$/i, "")
+    .replace(/\bOrderdatum\b.*$/i, "")
+    .replace(/\bOrderstatus\b.*$/i, "")
+    .replace(/\bReferentie\b.*$/i, "")
+    .trim();
 }
 
 function parseLogic4PickbonTextToOrder(text, fileName) {
