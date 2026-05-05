@@ -3,6 +3,26 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
 import styles from "./styles.js";
 import { profielData, kokerData, kleurData, demoPickerOrders } from "./data.js";
+import {
+  getArticleCode,
+  parseArticleCode,
+  getDemoOrdersWithDates,
+  getOrderDate,
+  getOrderProgress,
+  isOrderInWeek,
+  isOrderOpen,
+  addDays,
+  addWeeks,
+  startOfWeek,
+  formatDutchDate,
+  formatWeekLabel,
+  getWeekDays,
+  isSameDate,
+  toIsoDate,
+  parseLogic4PickbonTextToOrder,
+  readPdfTextWithPdfJs,
+  readPdfTextWithOcr
+} from "./utils.js";
 
 
 function BarcodeView({ value }) {
@@ -38,96 +58,19 @@ function getModuleDisplayName(moduleName) {
   if (moduleName === "Artikel PICKER") return "Artikel Zoeker";
   return moduleName;
 }
-function startOfWeek(date) {
-  const nextDate = new Date(date);
-  const day = nextDate.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  nextDate.setDate(nextDate.getDate() + diff);
-  nextDate.setHours(0, 0, 0, 0);
-  return nextDate;
-}
-function addDays(date, amount) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + amount);
-  return nextDate;
-}
-function addWeeks(date, amount) {
-  const nextDate = new Date(date);
-  nextDate.setDate(nextDate.getDate() + amount * 7);
-  return startOfWeek(nextDate);
-}
-function formatDutchDate(date) {
-  return date.toLocaleDateString("nl-NL", {
-    weekday: "short",
-    day: "numeric",
-    month: "short"
-  });
-}
-function formatWeekLabel(weekStart) {
-  const weekEnd = addDays(weekStart, 4);
-  return `${weekStart.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} - ${weekEnd.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
-}
-function getWeekDays(weekStart) {
-  return [0, 1, 2, 3, 4].map((offset) => {
-    const date = addDays(weekStart, offset);
-    return {
-      date,
-      dag: date.toLocaleDateString("nl-NL", { weekday: "short" }),
-      datum: String(date.getDate()),
-      label: formatDutchDate(date)
-    };
-  });
-}
-function isSameDate(a, b) {
-  return a.toDateString() === b.toDateString();
-}
-function toIsoDate(date) {
-  return date.toISOString().slice(0, 10);
-}
-function getDemoOrdersWithDates() {
-  const today = new Date();
-  const thisWeek = startOfWeek(today);
-  const previousWeek = addWeeks(thisWeek, -1);
-  const nextWeek = addWeeks(thisWeek, 1);
-  return demoPickerOrders.map((order, index) => {
-    const plannedDates = [
-      addDays(previousWeek, 2),
-      addDays(thisWeek, 1),
-      addDays(thisWeek, 3),
-      addDays(nextWeek, 1)
-    ];
-    return {
-      ...order,
-      plannedDate: toIsoDate(plannedDates[index] || today)
-    };
-  });
-}
-function getOrderDate(order) {
-  const date = new Date(order.plannedDate + "T00:00:00");
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-function isOrderInWeek(order, weekStart) {
-  const orderDate = getOrderDate(order);
-  const weekEnd = addDays(weekStart, 5);
-  return orderDate >= weekStart && orderDate < weekEnd;
-}
-function isOrderOpen(order) {
-  return order.status !== "Gereed";
-}
-function getOrderProgress(order) {
-  const rows = order?.rows || [];
-  const total = rows.length || Number(order?.regels || 0) || 0;
-  if (order?.status === "Gereed") {
-    return { done: total, open: 0, total };
-  }
-  const done = rows.filter((row) => row.processed || row.scannedQuantity >= row.quantity).length;
-  return {
-    done,
-    open: Math.max(0, total - done),
-    total
-  };
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
 async function loadPdfJsFromCdn() {
   if (window.pdfjsLib) {
     return window.pdfjsLib;
@@ -258,118 +201,7 @@ function cleanLogic4CustomerLine(value) {
   }
   return text;
 }
-function parseLogic4PickbonTextToOrder(text, fileName) {
-  const rawText = String(text || "");
-  const cleanText = normalizeOcrText(rawText);
-  const lines = rawText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const joinedLines = lines.join(" ");
-  const pickbonMatch =
-    cleanText.match(/Pickbon\s+(\d{3,})/i) ||
-    cleanText.match(/\bPickbon\b[^0-9]{0,20}(\d{3,})/i);
-  const orderMatch =
-    cleanText.match(/Ordernummer[:\s]+(\d{3,})/i) ||
-    cleanText.match(/\b(30\d{5,})\b/) ||
-    fileName.match(/(\d{5,})/);
-  const customerName = extractLogic4CustomerName(rawText, cleanText);
-  const klantnummerMatch = cleanText.match(/Klantnummer[:\s]+(\d{2,})/i);
-  const orderDate =
-    cleanText.match(/Orderdatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1] ||
-    cleanText.match(/Verzenddatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1];
-  const articleRows = [];
-  const seenCodes = new Set();
-  function addArticleRow(rawCode, quantity, sourceText = "") {
-    const code = String(rawCode || "").replace(/\D/g, "");
-    if (!code || seenCodes.has(code)) return false;
-    const parsed = parseArticleCode(code);
-    if (!parsed) return false;
-    seenCodes.add(code);
-    const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || code;
-    articleRows.push({
-      articleCode,
-      description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
-      type: parsed.type,
-      size: parsed.size,
-      length: parsed.length,
-      colorCode: parsed.colorCode,
-      colorName: parsed.colorName,
-      quantity: Math.max(1, Number(quantity || 1)),
-      pdfSourceText: sourceText
-    });
-    return true;
-  }
-  // 1. Beste herkenning voor jullie Logic4 layout:
-  // Art.nr staat soms als 14 cijfers op regel 1 en laatste 3 cijfers op regel 2.
-  // Omschrijving en aantallen staan in de regels erna.
-  for (let index = 0; index < lines.length; index++) {
-    const line = lines[index];
-    const nextLine = lines[index + 1] || "";
-    const next2Line = lines[index + 2] || "";
-    const next3Line = lines[index + 3] || "";
-    const windowText = [line, nextLine, next2Line, next3Line].join(" ").replace(/\s+/g, " ");
-    const baseMatch = line.match(/\b(\d{12,16})\b/);
-    const suffixMatch = nextLine.match(/^\s*(\d{1,6})\s*$/);
-    if (baseMatch && suffixMatch) {
-      const combinedCode = `${baseMatch[1]}${suffixMatch[1]}`;
-      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
-      const smallNumbers = qtyNumbers
-        .map((value) => Number(value))
-        .filter((value) => value > 0 && value <= 99);
-      // Laatste kleine getal is meestal "Nu te picken".
-      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
-      addArticleRow(combinedCode, quantity, windowText);
-    }
-  }
-  // 2. Fallback: zoek alle volledige codes in samengevoegde tekst.
-  const compactText = joinedLines.replace(/\s+/g, " ");
-  const fullCodes = compactText.match(/\b\d{15,24}\b/g) || [];
-  fullCodes.forEach((code) => {
-    if (seenCodes.has(code)) return;
-    const codeIndex = compactText.indexOf(code);
-    const sourceWindow = compactText.slice(codeIndex, codeIndex + 180);
-    const numbersAfterCode = sourceWindow
-      .slice(code.length)
-      .match(/\b\d+\b/g) || [];
-    const smallNumbers = numbersAfterCode
-      .map((value) => Number(value))
-      .filter((value) => value > 0 && value <= 99);
-    const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
-    addArticleRow(code, quantity, sourceWindow);
-  });
-  // 3. Laatste fallback speciaal voor deze pickbon:
-  // OCR kan de code splitsen of spaties zetten. Zoek "240..." + losse cijfers erachter in de buurt.
-  for (let index = 0; index < lines.length; index++) {
-    const windowText = lines.slice(index, index + 4).join(" ").replace(/\s+/g, " ");
-    const looseMatch = windowText.match(/\b(24\d{10,14})\D+(\d{1,6})\b/);
-    if (looseMatch) {
-      const combinedCode = `${looseMatch[1]}${looseMatch[2]}`;
-      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
-      const smallNumbers = qtyNumbers
-        .map((value) => Number(value))
-        .filter((value) => value > 0 && value <= 99);
-      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
-      addArticleRow(combinedCode, quantity, windowText);
-    }
-  }
-  const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
-  const orderId = orderMatch?.[1] || fallbackId;
-  const klant = customerName || (klantnummerMatch?.[1] ? `Klantnummer ${klantnummerMatch[1]}` : "Logic4 PDF pickbon");
-  return {
-    id: orderId,
-    pickbonNumber: pickbonMatch?.[1] || "",
-    klant,
-    tijd: "PDF",
-    status: "Open",
-    regels: articleRows.length,
-    kleur: "#eab308",
-    plannedDate: orderDate ? parseDutchPdfDate(orderDate) : parseDutchPdfDate(cleanText),
-    rows: articleRows,
-    source: "PDF",
-    rawPdfText: rawText
-  };
-}
+
 async function readPdfTextWithPdfJs(file) {
   const pdfjsLib = await loadPdfJsFromCdn();
   const buffer = await file.arrayBuffer();
@@ -596,6 +428,46 @@ export default function App() {
   }
 
 
+  function handleBrowserBack() {
+    if (selectedModule === "Artikelzoeker" && pickerView === "pickbon") {
+      setPickerView("home");
+      setScanResult("");
+      setScanError("");
+      setSearchError("");
+      window.history.pushState({ staaltool: "picker-home" }, "");
+      return;
+    }
+
+    if (selectedModule) {
+      setSelectedModule("");
+      setPickerView("home");
+      clearTool("types");
+      window.history.pushState({ staaltool: "menu" }, "");
+      return;
+    }
+
+    if (loggedIn) {
+      window.history.pushState({ staaltool: "menu" }, "");
+    }
+  }
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    window.history.replaceState({ staaltool: "menu" }, "");
+    window.history.pushState({ staaltool: "current" }, "");
+
+    const onPopState = () => {
+      handleBrowserBack();
+    };
+
+    window.addEventListener("popstate", onPopState);
+
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [loggedIn, selectedModule, pickerView]);
+
   function handleLogin(event) {
     event.preventDefault();
 
@@ -659,7 +531,20 @@ export default function App() {
     clearTool("types");
   }
 
+  function goToPickerHome() {
+    window.history.pushState({ staaltool: "picker-home" }, "");
+    stopScanner();
+    setLoggedIn(true);
+    setSelectedModule("Artikelzoeker");
+    setPickerView("home");
+    setStep("search");
+    setScanResult("");
+    setScanError("");
+    setSearchError("");
+  }
+
   function chooseModule(moduleName) {
+    window.history.pushState({ staaltool: moduleName }, "");
     setSelectedModule(moduleName);
 
     if (moduleName === "Artikelzoeker") {
@@ -1134,6 +1019,7 @@ export default function App() {
         }
       : order;
 
+    window.history.pushState({ staaltool: "pickbon", orderId: effectiveOrder?.id || "" }, "");
     setSelectedPickerOrder(effectiveOrder);
     setPickerView("pickbon");
 
@@ -1258,7 +1144,13 @@ export default function App() {
     return (
       <div style={styles.menuPage}>
         <div style={styles.menuCard}>
-          <img src="/logo.png" alt="logo" style={styles.menuLogo} />
+          <img
+            src="/logo.png"
+            alt="logo"
+            style={{ ...styles.menuLogo, cursor: "pointer" }}
+            onClick={() => chooseModule("Artikelzoeker")}
+            title="Naar Artikel Picker"
+          />
 
           <h1 style={styles.menuTitle}>Kies functie</h1>
           <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
@@ -1388,7 +1280,13 @@ export default function App() {
       <div style={styles.appShell}>
         <header style={styles.header} className="app-header-responsive">
           <div style={styles.brandRow} className="app-brand-responsive">
-            <img src="/logo.png" alt="logo" style={styles.headerLogo} />
+            <img
+              src="/logo.png"
+              alt="logo"
+              style={{ ...styles.headerLogo, cursor: "pointer" }}
+              onClick={goToPickerHome}
+              title="Naar Artikel Picker"
+            />
             <div>
               <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
               <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
