@@ -959,6 +959,53 @@ export default function App() {
   }
 
 
+  function handleBrowserBack() {
+    // Browser-terugknop blijft binnen de app.
+    // Vanaf pickbon: terug naar Orders verwerken + agenda.
+    if (selectedModule === "Artikelzoeker" && pickerView === "pickbon") {
+      setPickerView("home");
+      setSelectedPickerOrder(null);
+      setScanResult("");
+      setScanError("");
+      setSearchError("");
+      window.history.pushState({ staaltool: "picker-home" }, "");
+      return;
+    }
+
+    // Vanaf een module: terug naar keuzemenu.
+    if (selectedModule) {
+      stopScanner();
+      setSelectedModule("");
+      setPickerView("home");
+      clearTool("types");
+      window.history.pushState({ staaltool: "menu" }, "");
+      return;
+    }
+
+    // Op het hoofdmenu: niet meteen naar vorige website.
+    if (loggedIn) {
+      window.history.pushState({ staaltool: "menu" }, "");
+    }
+  }
+
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    // Zorgt dat één keer browser-terug niet direct van staaltool.nl af gaat.
+    window.history.replaceState({ staaltool: "start" }, "");
+    window.history.pushState({ staaltool: "active" }, "");
+
+    const onPopState = () => {
+      handleBrowserBack();
+    };
+
+    window.addEventListener("popstate", onPopState);
+
+    return () => {
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [loggedIn, selectedModule, pickerView]);
+
   function handleLogin(event) {
     event.preventDefault();
 
@@ -1022,7 +1069,20 @@ export default function App() {
     clearTool("types");
   }
 
+  function goToPickerStart() {
+    stopScanner();
+    setSelectedModule("Artikelzoeker");
+    setPickerView("home");
+    setSelectedPickerOrder(null);
+    setStep("search");
+    setScanResult("");
+    setScanError("");
+    setSearchError("");
+    window.history.pushState({ staaltool: "picker-home" }, "");
+  }
+
   function chooseModule(moduleName) {
+    window.history.pushState({ staaltool: moduleName }, "");
     setSelectedModule(moduleName);
 
     if (moduleName === "Artikelzoeker") {
@@ -1497,6 +1557,7 @@ export default function App() {
         }
       : order;
 
+    window.history.pushState({ staaltool: "pickbon", orderId: effectiveOrder?.id || "" }, "");
     setSelectedPickerOrder(effectiveOrder);
     setPickerView("pickbon");
 
@@ -1621,7 +1682,13 @@ export default function App() {
     return (
       <div style={styles.menuPage}>
         <div style={styles.menuCard}>
-          <img src="/logo.png" alt="logo" style={styles.menuLogo} />
+          <img
+            src="/logo.png"
+            alt="logo"
+            style={{ ...styles.menuLogo, cursor: "pointer" }}
+            onClick={() => chooseModule("Artikelzoeker")}
+            title="Naar Artikel Picker"
+          />
 
           <h1 style={styles.menuTitle}>Kies functie</h1>
           <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
@@ -1751,7 +1818,13 @@ export default function App() {
       <div style={styles.appShell}>
         <header style={styles.header} className="app-header-responsive">
           <div style={styles.brandRow} className="app-brand-responsive">
-            <img src="/logo.png" alt="logo" style={styles.headerLogo} />
+            <img
+              src="/logo.png"
+              alt="logo"
+              style={{ ...styles.headerLogo, cursor: "pointer" }}
+              onClick={goToPickerStart}
+              title="Naar Orders verwerken en agenda"
+            />
             <div>
               <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
               <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
