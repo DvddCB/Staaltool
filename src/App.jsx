@@ -1368,38 +1368,6 @@ export default function App() {
             </div>
 
             <section style={styles.twoColumn}>
-              <div style={styles.panel}>
-                <p style={styles.label}>Artikelzoeker / pickbon</p>
-                <h2 style={styles.bigTitle}>Pickbon verwerken</h2>
-
-                <label style={styles.inputLabel}>Pickbonnummer / ordernummer</label>
-                <input
-                  style={styles.lengthInput}
-                  value={pickbonNumber}
-                  onChange={(e) => setPickbonNumber(e.target.value)}
-                  placeholder="Bijv. PB-2026-001"
-                />
-
-                <form onSubmit={handleManualSearch}>
-                  <label style={{ ...styles.inputLabel, marginTop: 14 }}>Artikelcode of barcode</label>
-                  <input
-                    style={styles.lengthInput}
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="Bijv. 24010110096300092"
-                    inputMode="numeric"
-                  />
-
-                  <button style={styles.primaryButton} type="submit">
-                    Toevoegen aan pickbon
-                  </button>
-                </form>
-
-                <button style={styles.secondaryButton} onClick={startScanner}>
-                  Artikel barcode scannen
-                </button>
-              </div>
-
               <div style={styles.pickbonPanel}>
                 <div style={styles.pickbonHeader}>
                   <div>
@@ -1465,6 +1433,30 @@ export default function App() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              <div style={styles.scanUnderPickbonPanel}>
+                <p style={styles.label}>Artikel barcode scannen</p>
+                <h2 style={styles.scanUnderPickbonTitle}>Scan artikelen voor deze pickbon</h2>
+
+                <form onSubmit={handleManualSearch}>
+                  <label style={styles.inputLabel}>Artikelcode of barcode</label>
+                  <input
+                    style={styles.lengthInput}
+                    value={manualCode}
+                    onChange={(e) => setManualCode(e.target.value)}
+                    placeholder="Bijv. 24010110096300092"
+                    inputMode="numeric"
+                  />
+
+                  <button style={styles.primaryButton} type="submit">
+                    Handmatig toevoegen
+                  </button>
+                </form>
+
+                <button style={styles.secondaryButton} onClick={startScanner}>
+                  Artikel barcode scannen
+                </button>
               </div>
             </section>
           </>
@@ -2785,5 +2777,18 @@ const styles = {
     whiteSpace: "nowrap",
     fontWeight: 800,
     color: "#334155"
+  },
+  scanUnderPickbonPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+    marginBottom: 12
+  },
+  scanUnderPickbonTitle: {
+    margin: "6px 0 16px",
+    color: "#1234aa",
+    fontSize: 24,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
   },
 };
