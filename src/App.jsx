@@ -515,6 +515,43 @@ function parseDutchPdfDate(text) {
 
 
 
+
+function extractLogic4CustomerName(rawText, cleanText) {
+  const lines = String(rawText || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const voorIndex = lines.findIndex((line) => /^Voor\s*:?\s*$/i.test(line) || /^Voor\s*:/i.test(line));
+
+  if (voorIndex >= 0) {
+    const sameLineMatch = lines[voorIndex].match(/^Voor\s*:\s*(.+)$/i);
+    if (sameLineMatch?.[1]?.trim()) {
+      return sameLineMatch[1].trim();
+    }
+
+    const nextUsefulLine = lines
+      .slice(voorIndex + 1, voorIndex + 7)
+      .find((line) =>
+        line &&
+        !/^(Pickbon|Klantnummer|Verzenddatum|Ordernummer|Orderdatum|Orderstatus|Referentie|Art\.?nr|Omschrijving)$/i.test(line) &&
+        !/^\d{4,}$/.test(line) &&
+        !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(line)
+      );
+
+    if (nextUsefulLine) {
+      return nextUsefulLine.trim();
+    }
+  }
+
+  const cleanMatch = String(cleanText || "").match(/Voor\s*:\s*([A-Za-zÀ-ÿ0-9 .,&'-]{3,60})/i);
+  if (cleanMatch?.[1]) {
+    return cleanMatch[1].trim();
+  }
+
+  return "";
+}
+
 function parseLogic4PickbonTextToOrder(text, fileName) {
   const rawText = String(text || "");
   const cleanText = normalizeOcrText(rawText);
@@ -535,9 +572,8 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     cleanText.match(/\b(30\d{5,})\b/) ||
     fileName.match(/(\d{5,})/);
 
-  const klantMatch =
-    cleanText.match(/Klantnummer[:\s]+(\d{2,})/i) ||
-    cleanText.match(/Voor\s*:\s*([A-Za-zÀ-ÿ0-9 .,&'-]{3,40})/i);
+  const customerName = extractLogic4CustomerName(rawText, cleanText);
+  const klantnummerMatch = cleanText.match(/Klantnummer[:\s]+(\d{2,})/i);
 
   const orderDate =
     cleanText.match(/Orderdatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1] ||
@@ -639,7 +675,7 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
 
   const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
   const orderId = orderMatch?.[1] || fallbackId;
-  const klant = klantMatch?.[1] ? `Klant ${klantMatch[1]}` : "Logic4 PDF pickbon";
+  const klant = customerName || (klantnummerMatch?.[1] ? `Klantnummer ${klantnummerMatch[1]}` : "Logic4 PDF pickbon");
 
   return {
     id: orderId,
