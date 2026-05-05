@@ -316,10 +316,6 @@ function toIsoDate(date) {
 function getDemoOrdersWithDates() {
   const today = new Date();
 
-  const isAdmin = userRole === "admin";
-  const canUploadPdf = isAdmin;
-  const canEditDates = isAdmin;
-  const canRemoveOrders = isAdmin;
   const thisWeek = startOfWeek(today);
   const previousWeek = addWeeks(thisWeek, -1);
   const nextWeek = addWeeks(thisWeek, 1);
@@ -717,6 +713,11 @@ export default function App() {
   const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
+
+  const isAdmin = userRole === "admin";
+  const canUploadPdf = isAdmin;
+  const canEditDates = isAdmin;
+  const canRemoveOrders = isAdmin;
 
   const effectivePickerOrders = useMemo(() => {
     const adminDemoOrders = getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id));
