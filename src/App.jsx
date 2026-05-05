@@ -714,16 +714,21 @@ export default function App() {
   const today = new Date();
 
   const effectivePickerOrders = useMemo(() => {
-    const datedPickerOrders = [
-      ...getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id)),
-      ...uploadedPdfOrders
-    ];
+    const adminDemoOrders = getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id));
+
+    // De beheerder is leidend:
+    // - Beheerder ziet demo/testorders + alle door beheerder geuploade/ingeplande PDF-orders.
+    // - Gebruiker1 ziet alleen de echte beheerder-orders uit dezelfde centrale lokale lijst.
+    //   Zo krijgt Gebruiker1 geen eigen of afwijkende demo-lijst.
+    const datedPickerOrders = isAdmin
+      ? [...adminDemoOrders, ...uploadedPdfOrders]
+      : [...uploadedPdfOrders];
 
     return datedPickerOrders.map((order) => ({
       ...order,
       status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
     }));
-  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds]);
+  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds, isAdmin]);
 
   const allPickerOrdersSorted = effectivePickerOrders
     .slice()
@@ -749,6 +754,17 @@ export default function App() {
   const oldestOpenOrderOutsideWeek = effectivePickerOrders
     .filter((order) => isOrderOpen(order) && !isOrderInWeek(order, pickerWeekStart))
     .sort((a, b) => getOrderDate(a) - getOrderDate(b))[0];
+
+  useEffect(() => {
+    if (!effectivePickerOrders.length) {
+      setSelectedPickerOrder(null);
+      return;
+    }
+
+    if (!selectedPickerOrder || !effectivePickerOrders.some((order) => order.id === selectedPickerOrder.id)) {
+      setSelectedPickerOrder(effectivePickerOrders[0]);
+    }
+  }, [effectivePickerOrders, selectedPickerOrder]);
 
   const currentSelectedPickerOrder = selectedPickerOrder
     ? {
@@ -1664,6 +1680,12 @@ export default function App() {
                 </div>
 
                 <div style={styles.orderList}>
+                  {pagedPickerOrders.length === 0 && (
+                    <div style={styles.emptyPickbon}>
+                      Geen orders zichtbaar. De beheerder moet eerst orders uploaden en inplannen.
+                    </div>
+                  )}
+
                   {pagedPickerOrders.map((order) => (
                     <button
                       key={order.id}
