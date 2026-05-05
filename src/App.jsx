@@ -716,6 +716,7 @@ export default function App() {
           colorCode: parsed.colorCode,
           colorName: parsed.colorName,
           quantity: 1,
+          originalQuantity: 1,
           processed: false,
           scannedAt
         }
@@ -745,6 +746,7 @@ export default function App() {
         colorCode: row.colorCode || "",
         colorName: row.colorName || "",
         quantity: row.quantity,
+        originalQuantity: row.quantity,
         scannedQuantity: 0,
         processed: false,
         scannedAt: "-"
@@ -847,17 +849,18 @@ export default function App() {
       currentLines.map((line) => {
         if (line.id !== lineId) return line;
 
-        const requestedQuantity = Number(line.quantity || 1);
-        const quantity = Math.max(1, Number(nextQuantity) || 1);
+        const maxQuantity = Number(line.originalQuantity || line.quantity || 1);
+        const value = Math.max(1, Number(nextQuantity) || 1);
+        const safeQuantity = Math.min(value, maxQuantity);
 
-        // Bij orderregels mag het aantal nooit hoger worden dan gevraagd.
-        // Dit voorkomt dat 1 gevraagd artikel per ongeluk meerdere keren wordt gemaakt.
-        const safeQuantity = line.scannedQuantity !== undefined
-          ? Math.min(quantity, requestedQuantity)
-          : quantity;
-
-        return { ...line, quantity: safeQuantity };
+        return {
+          ...line,
+          quantity: safeQuantity,
+          processed: Number(line.scannedQuantity || 0) >= safeQuantity
+        };
       })
+    );
+  })
     );
   }
 
@@ -1629,7 +1632,30 @@ export default function App() {
                         <div style={styles.pickbonLineControls} className="pickbon-controls-responsive">
                           <div style={styles.requestedQtyBox}>
                             <span style={styles.qtyLabel}>Aantal</span>
-                            <strong>{line.quantity} stuks</strong>
+                            <input
+                              style={styles.qtyInput}
+                              type="number"
+                              min="1"
+                              max={line.originalQuantity || line.quantity}
+                              value={line.quantity}
+                              onChange={(e) => {
+                                const value = Math.max(1, Number(e.target.value) || 1);
+                                const maxQuantity = Number(line.originalQuantity || line.quantity || 1);
+                                const safeValue = Math.min(value, maxQuantity);
+
+                                setPickbonLines((currentLines) =>
+                                  currentLines.map((currentLine) =>
+                                    currentLine.id === line.id
+                                      ? {
+                                          ...currentLine,
+                                          quantity: safeValue,
+                                          processed: Number(currentLine.scannedQuantity || 0) >= safeValue
+                                        }
+                                      : currentLine
+                                  )
+                                );
+                              }}
+                            />
                           </div>
 
                           {!line.processed && Number(line.scannedQuantity || 0) < Number(line.quantity || 1) && (
