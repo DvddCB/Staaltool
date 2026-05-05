@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
+import * as pdfjsLib from "pdfjs-dist";
+import pdfjsWorker from "pdfjs-dist/build/pdf.worker?url";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -418,6 +422,105 @@ function getOrderProgress(order) {
   };
 }
 
+function findQuantityNearCode(lines, lineIndex, code) {
+  const candidates = [];
+
+  for (let offset = 0; offset <= 2; offset++) {
+    const line = lines[lineIndex + offset] || "";
+    const afterCode = line.slice(line.indexOf(code) + code.length);
+    const numbers = afterCode.match(/\b\d+\b/g) || [];
+
+    numbers.forEach((numberText) => {
+      const value = Number(numberText);
+      if (value > 0 && value <= 999) candidates.push(value);
+    });
+  }
+
+  return candidates[0] || 1;
+}
+
+function parseDutchPdfDate(text) {
+  const dateMatch =
+    text.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/) ||
+    text.match(/\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b/);
+
+  if (!dateMatch) return toIsoDate(new Date());
+
+  if (dateMatch[1].length === 4) {
+    const year = dateMatch[1];
+    const month = String(dateMatch[2]).padStart(2, "0");
+    const day = String(dateMatch[3]).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  const day = String(dateMatch[1]).padStart(2, "0");
+  const month = String(dateMatch[2]).padStart(2, "0");
+  const year = dateMatch[3];
+
+  return `${year}-${month}-${day}`;
+}
+
+function parsePickbonTextToOrder(text, fileName) {
+  const cleanText = String(text || "").replace(/\s+/g, " ").trim();
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const orderMatch =
+    cleanText.match(/(?:pickbon|order|ordernummer|bestelling|bon)[\s:#-]*([A-Z0-9-]{3,})/i) ||
+    cleanText.match(/\b(ORD[-\s]?\d{3,}|PB[-\s]?\d{3,}|\d{5,})\b/i);
+
+  const customerMatch =
+    cleanText.match(/(?:klant|debiteur|afnemer)[\s:#-]*([A-Za-zÀ-ÿ0-9 .,&'-]{3,60})/i);
+
+  const articleCodeMatches = [];
+  const seenCodes = new Set();
+
+  lines.forEach((line, lineIndex) => {
+    const codes = line.match(/\b\d{15,24}\b/g) || [];
+
+    codes.forEach((code) => {
+      if (seenCodes.has(code)) return;
+
+      const parsed = parseArticleCode(code);
+      if (!parsed) return;
+
+      seenCodes.add(code);
+
+      const quantity = findQuantityNearCode(lines, lineIndex, code);
+      const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode);
+
+      articleCodeMatches.push({
+        articleCode,
+        description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
+        type: parsed.type,
+        size: parsed.size,
+        length: parsed.length,
+        colorCode: parsed.colorCode,
+        colorName: parsed.colorName,
+        quantity
+      });
+    });
+  });
+
+  const orderId = orderMatch?.[1]?.replace(/\s+/g, "-") || `PDF-${Date.now()}`;
+  const klant = customerMatch?.[1]?.trim() || fileName.replace(/\.pdf$/i, "");
+
+  return {
+    id: orderId,
+    klant,
+    tijd: "PDF",
+    status: "Open",
+    regels: articleCodeMatches.length,
+    kleur: "#eab308",
+    plannedDate: parseDutchPdfDate(cleanText),
+    rows: articleCodeMatches,
+    source: "PDF"
+  };
+}
+
+
 export default function App() {
   const controlsRef = useRef(null);
   const scanLockRef = useRef(false);
@@ -436,6 +539,14 @@ export default function App() {
       return [];
     }
   });
+  const [uploadedPdfOrders, setUploadedPdfOrders] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("staaltoolUploadedPdfOrders") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [pdfUploadMessage, setPdfUploadMessage] = useState("");
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
 
   const [username, setUsername] = useState("");
@@ -479,7 +590,7 @@ export default function App() {
   );
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
-  const datedPickerOrders = getDemoOrdersWithDates();
+  const datedPickerOrders = [...getDemoOrdersWithDates(), ...uploadedPdfOrders];
   const effectivePickerOrders = datedPickerOrders.map((order) => ({
     ...order,
     status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
@@ -527,12 +638,62 @@ export default function App() {
   }, [processedOrderIds]);
 
   useEffect(() => {
+    localStorage.setItem("staaltoolUploadedPdfOrders", JSON.stringify(uploadedPdfOrders));
+  }, [uploadedPdfOrders]);
+
+  useEffect(() => {
     localStorage.setItem("staaltoolPickbonLines", JSON.stringify(pickbonLines));
   }, [pickbonLines]);
 
   useEffect(() => {
     localStorage.setItem("staaltoolPickbonNumber", pickbonNumber || "");
   }, [pickbonNumber]);
+
+  async function handlePdfUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setPdfUploadMessage("PDF wordt gelezen...");
+    setSearchError("");
+
+    try {
+      const buffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const pageTexts = [];
+
+      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+        const page = await pdf.getPage(pageNumber);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item) => item.str).join("\n");
+        pageTexts.push(pageText);
+      }
+
+      const fullText = pageTexts.join("\n");
+      const order = parsePickbonTextToOrder(fullText, file.name);
+
+      if (!order.rows.length) {
+        setPdfUploadMessage("");
+        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelcodes gevonden.");
+        event.target.value = "";
+        return;
+      }
+
+      setUploadedPdfOrders((currentOrders) => {
+        const withoutSameOrder = currentOrders.filter((item) => item.id !== order.id);
+        return [...withoutSameOrder, order];
+      });
+
+      setSelectedPickerOrder(order);
+      setPickerWeekStart(startOfWeek(getOrderDate(order)));
+      setPdfUploadMessage(`PDF-order geladen: ${order.id} met ${order.rows.length} regel(s).`);
+      event.target.value = "";
+    } catch (err) {
+      console.error(err);
+      setPdfUploadMessage("");
+      setSearchError("PDF kon niet worden gelezen. Controleer of dit een tekst-PDF is en geen scan-afbeelding.");
+      event.target.value = "";
+    }
+  }
 
   function handleLogin(event) {
     event.preventDefault();
@@ -1363,6 +1524,26 @@ export default function App() {
                 }}
                   placeholder="Zoek order of klant..."
                 />
+              </div>
+
+              <div style={styles.pdfUploadPanel}>
+                <div>
+                  <p style={styles.label}>PDF pickbon</p>
+                  <h3 style={styles.pdfUploadTitle}>Pickbon uploaden</h3>
+                  <p style={styles.pdfUploadText}>Upload een Logic4 pickbon-PDF. Herkende regels komen direct in de orderlijst.</p>
+                </div>
+
+                <label style={styles.pdfUploadButton}>
+                  PDF kiezen
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    style={{ display: "none" }}
+                    onChange={handlePdfUpload}
+                  />
+                </label>
+
+                {pdfUploadMessage && <div style={styles.pdfUploadMessage}>{pdfUploadMessage}</div>}
               </div>
 
               <div style={styles.allOrdersPanel}>
@@ -3171,6 +3352,47 @@ const styles = {
   qtyMaxText: {
     color: "#64748b",
     fontSize: 11,
+    fontWeight: 800
+  },
+  pdfUploadPanel: {
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 12,
+    alignItems: "center"
+  },
+  pdfUploadTitle: {
+    margin: "4px 0 4px",
+    color: "#1234aa",
+    fontSize: 22,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  pdfUploadText: {
+    margin: 0,
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: 700
+  },
+  pdfUploadButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#1234aa",
+    color: "white",
+    padding: "13px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    textAlign: "center"
+  },
+  pdfUploadMessage: {
+    gridColumn: "1 / -1",
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 12,
+    padding: 10,
     fontWeight: 800
   },
 };
