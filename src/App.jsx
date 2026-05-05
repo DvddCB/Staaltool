@@ -522,13 +522,13 @@ function extractLogic4CustomerName(rawText, cleanText) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  // 1. Ideaal geval: "Voor:" staat op aparte regel.
-  // Neem dan exact de eerstvolgende regel en stop direct.
+  // 1. Beste geval: "Voor:" staat op aparte regel.
+  // Neem exact de eerste regel eronder.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
 
     if (/^Voor\s*:?\s*$/i.test(line)) {
-      return lines[index + 1]?.trim() || "";
+      return cleanLogic4CustomerLine(lines[index + 1] || "");
     }
 
     const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
@@ -537,27 +537,50 @@ function extractLogic4CustomerName(rawText, cleanText) {
     }
   }
 
-  // 2. OCR fallback: alles staat soms op 1 lange regel.
-  // Pak alleen het stuk direct na "Voor:" tot aan een duidelijk volgend veld/adres/telefoon.
-  const fallbackMatch = String(cleanText || "").match(
-    /Voor\s*:\s*(.*?)(?:\s+\d{4}\s?[A-Z]{2}\b|\s+\d{2}[-\s]?\d{8}\b|\s+Klantnummer\b|\s+Verzenddatum\b|\s+Ordernummer\b|\s+Orderdatum\b|\s+Orderstatus\b|\s+Referentie\b|\s+Art\.?nr\b|\s+Omschrijving\b|$)/i
-  );
-
+  // 2. OCR fallback: "Voor:" staat soms in één lange regel.
+  // Dan pakken we alleen het eerste blok direct na Voor:
+  const fallbackMatch = String(cleanText || "").match(/Voor\s*:\s*(.+)$/i);
   return cleanLogic4CustomerLine(fallbackMatch?.[1] || "");
 }
 
 function cleanLogic4CustomerLine(value) {
-  return String(value || "")
+  let text = String(value || "")
     .replace(/\s+/g, " ")
-    .replace(/\b\d{4}\s?[A-Z]{2}\b.*$/i, "")
-    .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
+    .trim();
+
+  // Stop bij bekende velden.
+  text = text
     .replace(/\bKlantnummer\b.*$/i, "")
     .replace(/\bVerzenddatum\b.*$/i, "")
     .replace(/\bOrdernummer\b.*$/i, "")
     .replace(/\bOrderdatum\b.*$/i, "")
     .replace(/\bOrderstatus\b.*$/i, "")
     .replace(/\bReferentie\b.*$/i, "")
+    .replace(/\bArt\.?nr\b.*$/i, "")
+    .replace(/\bOmschrijving\b.*$/i, "")
     .trim();
+
+  // Stop bij postcode of telefoon.
+  text = text
+    .replace(/\b\d{4}\s?[A-Z]{2}\b.*$/i, "")
+    .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
+    .trim();
+
+  // Speciaal voor OCR waarbij adres achter klant op dezelfde regel komt:
+  // "Balie eentweedrie 1 1234ab..." => "Balie"
+  const beforeAddress = text.match(/^(.+?)\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9.'-]*\s+\d+\b/);
+  if (beforeAddress?.[1]) {
+    text = beforeAddress[1].trim();
+  }
+
+  // Als OCR nog steeds alles aan elkaar zet, neem alleen het eerste woord/blok.
+  // Voor jullie voorbeeld wordt dit "Balie".
+  if (text.includes(" ")) {
+    const firstWord = text.split(" ")[0].trim();
+    if (firstWord) return firstWord;
+  }
+
+  return text;
 }
 
 function parseLogic4PickbonTextToOrder(text, fileName) {
