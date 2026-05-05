@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
+
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
   HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -92,6 +93,70 @@ const baseMaps = {
   }
 };
 
+const demoPickerOrders = [
+  {
+    id: "ORD-10482",
+    klant: "Bouwbedrijf De Vries",
+    tijd: "08:30",
+    status: "Open",
+    rows: [
+      makeDemoRow("24010110096300092", 2),
+      makeDemoRow("240402100504000914", 1)
+    ]
+  },
+  {
+    id: "ORD-10483",
+    klant: "Jansen Constructie",
+    tijd: "10:00",
+    status: "Bezig",
+    rows: [
+      makeDemoRow("2402021001003500911", 1),
+      makeDemoRow("24050210050450091", 2)
+    ]
+  },
+  {
+    id: "ORD-10484",
+    klant: "Circulair Project Noord",
+    tijd: "12:45",
+    status: "Open",
+    rows: [makeDemoRow("240103140135300097", 1)]
+  },
+  {
+    id: "ORD-10485",
+    klant: "Van Dijk Montage",
+    tijd: "15:15",
+    status: "Gereed",
+    rows: [makeDemoRow("2404113001506000914", 1)]
+  }
+];
+
+function makeDemoRow(code, quantity) {
+  const parsed = parseArticleCode(code);
+  if (!parsed) {
+    return {
+      articleCode: code,
+      description: code,
+      type: "",
+      size: "",
+      length: "",
+      colorCode: "",
+      colorName: "",
+      quantity
+    };
+  }
+
+  return {
+    articleCode: getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || code,
+    description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
+    type: parsed.type,
+    size: parsed.size,
+    length: parsed.length,
+    colorCode: parsed.colorCode,
+    colorName: parsed.colorName,
+    quantity
+  };
+}
+
 function getArticleCode(type, size, lengthMm, colorCode) {
   const length = Number(lengthMm);
   if (!type || !size || !length || !colorCode) return "";
@@ -163,7 +228,6 @@ function BarcodeView({ value }) {
 
     try {
       svgRef.current.innerHTML = "";
-
       JsBarcode(svgRef.current, String(value), {
         format: "CODE128",
         width: 2,
@@ -189,123 +253,11 @@ function BarcodeView({ value }) {
   );
 }
 
-
 function getModuleDisplayName(moduleName) {
   if (moduleName === "Artikelzoeker") return "Artikel Picker";
   if (moduleName === "Artikel PICKER") return "Artikel Zoeker";
   return moduleName;
 }
-
-const demoPickerOrders = [
-  {
-    id: "ORD-10482",
-    klant: "Bouwbedrijf De Vries",
-    tijd: "08:30",
-    status: "Open",
-    regels: 6,
-    kleur: "#f97316",
-    rows: [
-      {
-        articleCode: "24010110096300092",
-        description: "HEA 100 - 3000 mm - 2. Bruin",
-        type: "HEA",
-        size: "100",
-        length: 3000,
-        colorCode: "2",
-        colorName: "Bruin",
-        quantity: 2
-      },
-      {
-        articleCode: "240402100504000914",
-        description: "IPE 100 - 4000 mm - 14. Zwart",
-        type: "IPE",
-        size: "100",
-        length: 4000,
-        colorCode: "14",
-        colorName: "Zwart",
-        quantity: 1
-      }
-    ]
-  },
-  {
-    id: "ORD-10483",
-    klant: "Jansen Constructie",
-    tijd: "10:00",
-    status: "Bezig",
-    regels: 12,
-    kleur: "#2563eb",
-    rows: [
-      {
-        articleCode: "2402021001003500911",
-        description: "HEB 100 - 3500 mm - 11. Rood",
-        type: "HEB",
-        size: "100",
-        length: 3500,
-        colorCode: "11",
-        colorName: "Rood",
-        quantity: 1
-      },
-      {
-        articleCode: "24050210050450091",
-        description: "UNP 100 - 4500 mm - 1. Blauw",
-        type: "UNP",
-        size: "100",
-        length: 4500,
-        colorCode: "1",
-        colorName: "Blauw",
-        quantity: 2
-      }
-    ]
-  },
-  {
-    id: "ORD-10484",
-    klant: "Circulair Project Noord",
-    tijd: "12:45",
-    status: "Open",
-    regels: 4,
-    kleur: "#16a34a",
-    rows: [
-      {
-        articleCode: "240103140135300097",
-        description: "HEA 140 - 3000 mm - 7. Groen",
-        type: "HEA",
-        size: "140",
-        length: 3000,
-        colorCode: "7",
-        colorName: "Groen",
-        quantity: 1
-      }
-    ]
-  },
-  {
-    id: "ORD-10485",
-    klant: "Van Dijk Montage",
-    tijd: "15:15",
-    status: "Gereed",
-    regels: 9,
-    kleur: "#64748b",
-    rows: [
-      {
-        articleCode: "2404113001506000914",
-        description: "IPE 300 - 6000 mm - 14. Zwart",
-        type: "IPE",
-        size: "300",
-        length: 6000,
-        colorCode: "14",
-        colorName: "Zwart",
-        quantity: 1
-      }
-    ]
-  }
-];
-
-const demoPickerDays = [
-  { dag: "Ma", datum: "6", orders: 2 },
-  { dag: "Di", datum: "7", orders: 4 },
-  { dag: "Wo", datum: "8", orders: 1 },
-  { dag: "Do", datum: "9", orders: 3 },
-  { dag: "Vr", datum: "10", orders: 5 }
-];
 
 function startOfWeek(date) {
   const nextDate = new Date(date);
@@ -344,7 +296,6 @@ function formatWeekLabel(weekStart) {
 function getWeekDays(weekStart) {
   return [0, 1, 2, 3, 4].map((offset) => {
     const date = addDays(weekStart, offset);
-
     return {
       date,
       dag: date.toLocaleDateString("nl-NL", { weekday: "short" }),
@@ -378,13 +329,15 @@ function getDemoOrdersWithDates() {
 
     return {
       ...order,
+      regels: order.rows.length,
+      kleur: ["#f97316", "#2563eb", "#16a34a", "#64748b"][index] || "#eab308",
       plannedDate: toIsoDate(plannedDates[index] || today)
     };
   });
 }
 
 function getOrderDate(order) {
-  const date = new Date(order.plannedDate + "T00:00:00");
+  const date = new Date((order?.plannedDate || toIsoDate(new Date())) + "T00:00:00");
   date.setHours(0, 0, 0, 0);
   return date;
 }
@@ -399,7 +352,6 @@ function isOrderOpen(order) {
   return order.status !== "Gereed";
 }
 
-
 function getOrderProgress(order) {
   const rows = order?.rows || [];
   const total = rows.length || Number(order?.regels || 0) || 0;
@@ -408,7 +360,7 @@ function getOrderProgress(order) {
     return { done: total, open: 0, total };
   }
 
-  const done = rows.filter((row) => row.processed || row.scannedQuantity >= row.quantity).length;
+  const done = rows.filter((row) => row.processed || Number(row.scannedQuantity || 0) >= Number(row.quantity || 1)).length;
 
   return {
     done,
@@ -417,15 +369,11 @@ function getOrderProgress(order) {
   };
 }
 
-
 async function loadPdfJsFromCdn() {
-  if (window.pdfjsLib) {
-    return window.pdfjsLib;
-  }
+  if (window.pdfjsLib) return window.pdfjsLib;
 
   await new Promise((resolve, reject) => {
     const existingScript = document.querySelector("script[data-pdfjs-cdn='true']");
-
     if (existingScript) {
       existingScript.addEventListener("load", resolve, { once: true });
       existingScript.addEventListener("error", reject, { once: true });
@@ -441,9 +389,7 @@ async function loadPdfJsFromCdn() {
     document.body.appendChild(script);
   });
 
-  if (!window.pdfjsLib) {
-    throw new Error("PDF.js kon niet worden geladen.");
-  }
+  if (!window.pdfjsLib) throw new Error("PDF.js kon niet worden geladen.");
 
   window.pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -451,15 +397,11 @@ async function loadPdfJsFromCdn() {
   return window.pdfjsLib;
 }
 
-
 async function loadTesseractFromCdn() {
-  if (window.Tesseract) {
-    return window.Tesseract;
-  }
+  if (window.Tesseract) return window.Tesseract;
 
   await new Promise((resolve, reject) => {
     const existingScript = document.querySelector("script[data-tesseract-cdn='true']");
-
     if (existingScript) {
       existingScript.addEventListener("load", resolve, { once: true });
       existingScript.addEventListener("error", reject, { once: true });
@@ -475,13 +417,10 @@ async function loadTesseractFromCdn() {
     document.body.appendChild(script);
   });
 
-  if (!window.Tesseract) {
-    throw new Error("OCR kon niet worden geladen.");
-  }
+  if (!window.Tesseract) throw new Error("OCR kon niet worden geladen.");
 
   return window.Tesseract;
 }
-
 
 function normalizeOcrText(text) {
   return String(text || "")
@@ -513,17 +452,12 @@ function parseDutchPdfDate(text) {
   return `${year}-${month}-${day}`;
 }
 
-
-
-
 function extractLogic4CustomerName(rawText, cleanText) {
   const lines = String(rawText || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  // 1. Beste geval: "Voor:" staat op aparte regel.
-  // Neem exact de eerste regel eronder.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
 
@@ -537,8 +471,6 @@ function extractLogic4CustomerName(rawText, cleanText) {
     }
   }
 
-  // 2. OCR fallback: "Voor:" staat soms in één lange regel.
-  // Dan pakken we alleen het eerste blok direct na Voor:
   const fallbackMatch = String(cleanText || "").match(/Voor\s*:\s*(.+)$/i);
   return cleanLogic4CustomerLine(fallbackMatch?.[1] || "");
 }
@@ -548,7 +480,6 @@ function cleanLogic4CustomerLine(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  // Stop bij bekende velden.
   text = text
     .replace(/\bKlantnummer\b.*$/i, "")
     .replace(/\bVerzenddatum\b.*$/i, "")
@@ -560,21 +491,14 @@ function cleanLogic4CustomerLine(value) {
     .replace(/\bOmschrijving\b.*$/i, "")
     .trim();
 
-  // Stop bij postcode of telefoon.
   text = text
     .replace(/\b\d{4}\s?[A-Z]{2}\b.*$/i, "")
     .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
     .trim();
 
-  // Speciaal voor OCR waarbij adres achter klant op dezelfde regel komt:
-  // "Balie eentweedrie 1 1234ab..." => "Balie"
   const beforeAddress = text.match(/^(.+?)\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9.'-]*\s+\d+\b/);
-  if (beforeAddress?.[1]) {
-    text = beforeAddress[1].trim();
-  }
+  if (beforeAddress?.[1]) text = beforeAddress[1].trim();
 
-  // Als OCR nog steeds alles aan elkaar zet, neem alleen het eerste woord/blok.
-  // Voor jullie voorbeeld wordt dit "Balie".
   if (text.includes(" ")) {
     const firstWord = text.split(" ")[0].trim();
     if (firstWord) return firstWord;
@@ -586,12 +510,10 @@ function cleanLogic4CustomerLine(value) {
 function parseLogic4PickbonTextToOrder(text, fileName) {
   const rawText = String(text || "");
   const cleanText = normalizeOcrText(rawText);
-
   const lines = rawText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
-
   const joinedLines = lines.join(" ");
 
   const pickbonMatch =
@@ -639,9 +561,6 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     return true;
   }
 
-  // 1. Beste herkenning voor jullie Logic4 layout:
-  // Art.nr staat soms als 14 cijfers op regel 1 en laatste 3 cijfers op regel 2.
-  // Omschrijving en aantallen staan in de regels erna.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
     const nextLine = lines[index + 1] || "";
@@ -655,17 +574,12 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     if (baseMatch && suffixMatch) {
       const combinedCode = `${baseMatch[1]}${suffixMatch[1]}`;
       const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
-      const smallNumbers = qtyNumbers
-        .map((value) => Number(value))
-        .filter((value) => value > 0 && value <= 99);
-
-      // Laatste kleine getal is meestal "Nu te picken".
+      const smallNumbers = qtyNumbers.map(Number).filter((value) => value > 0 && value <= 99);
       const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
       addArticleRow(combinedCode, quantity, windowText);
     }
   }
 
-  // 2. Fallback: zoek alle volledige codes in samengevoegde tekst.
   const compactText = joinedLines.replace(/\s+/g, " ");
   const fullCodes = compactText.match(/\b\d{15,24}\b/g) || [];
 
@@ -674,20 +588,12 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
 
     const codeIndex = compactText.indexOf(code);
     const sourceWindow = compactText.slice(codeIndex, codeIndex + 180);
-    const numbersAfterCode = sourceWindow
-      .slice(code.length)
-      .match(/\b\d+\b/g) || [];
-
-    const smallNumbers = numbersAfterCode
-      .map((value) => Number(value))
-      .filter((value) => value > 0 && value <= 99);
-
+    const numbersAfterCode = sourceWindow.slice(code.length).match(/\b\d+\b/g) || [];
+    const smallNumbers = numbersAfterCode.map(Number).filter((value) => value > 0 && value <= 99);
     const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
     addArticleRow(code, quantity, sourceWindow);
   });
 
-  // 3. Laatste fallback speciaal voor deze pickbon:
-  // OCR kan de code splitsen of spaties zetten. Zoek "240..." + losse cijfers erachter in de buurt.
   for (let index = 0; index < lines.length; index++) {
     const windowText = lines.slice(index, index + 4).join(" ").replace(/\s+/g, " ");
     const looseMatch = windowText.match(/\b(24\d{10,14})\D+(\d{1,6})\b/);
@@ -695,17 +601,14 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     if (looseMatch) {
       const combinedCode = `${looseMatch[1]}${looseMatch[2]}`;
       const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
-      const smallNumbers = qtyNumbers
-        .map((value) => Number(value))
-        .filter((value) => value > 0 && value <= 99);
-
+      const smallNumbers = qtyNumbers.map(Number).filter((value) => value > 0 && value <= 99);
       const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
       addArticleRow(combinedCode, quantity, windowText);
     }
   }
 
   const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
-  const orderId = orderMatch?.[1] || fallbackId;
+  const orderId = orderMatch?.[1] || pickbonMatch?.[1] || fallbackId;
   const klant = customerName || (klantnummerMatch?.[1] ? `Klantnummer ${klantnummerMatch[1]}` : "Logic4 PDF pickbon");
 
   return {
@@ -723,7 +626,6 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
   };
 }
 
-
 async function readPdfTextWithPdfJs(file) {
   const pdfjsLib = await loadPdfJsFromCdn();
   const buffer = await file.arrayBuffer();
@@ -737,10 +639,7 @@ async function readPdfTextWithPdfJs(file) {
     pageTexts.push(pageText);
   }
 
-  return {
-    pdf,
-    text: pageTexts.join("\n")
-  };
+  return { pdf, text: pageTexts.join("\n") };
 }
 
 async function readPdfTextWithOcr(pdf) {
@@ -752,14 +651,10 @@ async function readPdfTextWithOcr(pdf) {
     const viewport = page.getViewport({ scale: 3 });
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-
     canvas.width = viewport.width;
     canvas.height = viewport.height;
 
-    await page.render({
-      canvasContext: context,
-      viewport
-    }).promise;
+    await page.render({ canvasContext: context, viewport }).promise;
 
     const result = await Tesseract.recognize(canvas, "nld+eng");
     pageTexts.push(result?.data?.text || "");
@@ -767,7 +662,6 @@ async function readPdfTextWithOcr(pdf) {
 
   return pageTexts.join("\n");
 }
-
 
 export default function App() {
   const controlsRef = useRef(null);
@@ -780,27 +674,9 @@ export default function App() {
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
   const [pickerOrderPage, setPickerOrderPage] = useState(1);
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
-  const [processedOrderIds, setProcessedOrderIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("staaltoolProcessedOrderIds") || "[]");
-    } catch {
-      return [];
-    }
-  });
-  const [uploadedPdfOrders, setUploadedPdfOrders] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("staaltoolUploadedPdfOrders") || "[]");
-    } catch {
-      return [];
-    }
-  });
-  const [hiddenDemoOrderIds, setHiddenDemoOrderIds] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("staaltoolHiddenDemoOrderIds") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [processedOrderIds, setProcessedOrderIds] = useState(() => safeJson("staaltoolProcessedOrderIds", []));
+  const [uploadedPdfOrders, setUploadedPdfOrders] = useState(() => safeJson("staaltoolUploadedPdfOrders", []));
+  const [hiddenDemoOrderIds, setHiddenDemoOrderIds] = useState(() => safeJson("staaltoolHiddenDemoOrderIds", []));
   const [pdfUploadMessage, setPdfUploadMessage] = useState("");
   const [lastUploadedOrderId, setLastUploadedOrderId] = useState("");
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
@@ -826,46 +702,40 @@ export default function App() {
   const [manualCode, setManualCode] = useState("");
   const [searchError, setSearchError] = useState("");
 
-  const [pickbonLines, setPickbonLines] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("staaltoolPickbonLines") || "[]");
-    } catch {
-      return [];
-    }
-  });
+  const [pickbonLines, setPickbonLines] = useState(() => safeJson("staaltoolPickbonLines", []));
   const [pickbonNumber, setPickbonNumber] = useState(() => localStorage.getItem("staaltoolPickbonNumber") || "");
-
-  const [logic4OrderNumber, setLogic4OrderNumber] = useState("");
-  const [logic4Message, setLogic4Message] = useState("");
-
   const [confirmLineId, setConfirmLineId] = useState(null);
 
   const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
-  const filteredSizes = sizes.filter((item) =>
-    String(item).toLowerCase().includes(query.toLowerCase())
-  );
+  const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
-  const datedPickerOrders = [
-    ...getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id)),
-    ...uploadedPdfOrders
-  ];
-  const effectivePickerOrders = datedPickerOrders.map((order) => ({
-    ...order,
-    status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
-  }));
+
+  const effectivePickerOrders = useMemo(() => {
+    const datedPickerOrders = [
+      ...getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id)),
+      ...uploadedPdfOrders
+    ];
+
+    return datedPickerOrders.map((order) => ({
+      ...order,
+      status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
+    }));
+  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds]);
+
   const allPickerOrdersSorted = effectivePickerOrders
     .slice()
     .sort((a, b) => {
       const statusSort = Number(a.status === "Gereed") - Number(b.status === "Gereed");
       if (statusSort !== 0) return statusSort;
-
       return getOrderDate(a) - getOrderDate(b) || String(a.tijd).localeCompare(String(b.tijd));
     });
+
   const allFilteredPickerOrders = allPickerOrdersSorted.filter((order) =>
     (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
   );
+
   const ordersPerPage = 6;
   const pickerOrderPageCount = Math.max(1, Math.ceil(allFilteredPickerOrders.length / ordersPerPage));
   const safePickerOrderPage = Math.min(pickerOrderPage, pickerOrderPageCount);
@@ -873,16 +743,19 @@ export default function App() {
     (safePickerOrderPage - 1) * ordersPerPage,
     safePickerOrderPage * ordersPerPage
   );
+
   const visiblePickerOrders = effectivePickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
   const oldestOpenOrderOutsideWeek = effectivePickerOrders
     .filter((order) => isOrderOpen(order) && !isOrderInWeek(order, pickerWeekStart))
     .sort((a, b) => getOrderDate(a) - getOrderDate(b))[0];
+
   const currentSelectedPickerOrder = selectedPickerOrder
     ? {
         ...selectedPickerOrder,
         status: processedOrderIds.includes(selectedPickerOrder.id) ? "Gereed" : selectedPickerOrder.status
       }
     : selectedPickerOrder;
+
   const allPickbonLinesProcessed = pickbonLines.length > 0 && pickbonLines.every((line) => {
     const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
     const pickedQuantity = Number(line.scannedQuantity || 0);
@@ -913,6 +786,25 @@ export default function App() {
     localStorage.setItem("staaltoolPickbonNumber", pickbonNumber || "");
   }, [pickbonNumber]);
 
+  useEffect(() => {
+    if (!loggedIn) return;
+
+    window.history.replaceState({ staaltool: "start" }, "");
+    window.history.pushState({ staaltool: "active" }, "");
+
+    const onPopState = () => handleBrowserBack();
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [loggedIn, selectedModule, pickerView]);
+
+  function safeJson(key, fallback) {
+    try {
+      return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback));
+    } catch {
+      return fallback;
+    }
+  }
+
   async function handlePdfUpload(event) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -926,7 +818,7 @@ export default function App() {
       let order = parseLogic4PickbonTextToOrder(fullText, file.name);
 
       if (!order.rows.length) {
-        setPdfUploadMessage("PDF bevat geen tekst. OCR wordt gestart...");
+        setPdfUploadMessage("PDF bevat geen tekst of geen artikelregels. OCR wordt gestart...");
         const ocrText = await readPdfTextWithOcr(pdf);
         fullText = `${fullText}\n${ocrText}`;
         order = parseLogic4PickbonTextToOrder(fullText, file.name);
@@ -958,10 +850,7 @@ export default function App() {
     }
   }
 
-
   function handleBrowserBack() {
-    // Browser-terugknop blijft binnen de app.
-    // Vanaf pickbon: terug naar Orders verwerken + agenda.
     if (selectedModule === "Artikelzoeker" && pickerView === "pickbon") {
       setPickerView("home");
       setSelectedPickerOrder(null);
@@ -972,7 +861,6 @@ export default function App() {
       return;
     }
 
-    // Vanaf een module: terug naar keuzemenu.
     if (selectedModule) {
       stopScanner();
       setSelectedModule("");
@@ -982,29 +870,8 @@ export default function App() {
       return;
     }
 
-    // Op het hoofdmenu: niet meteen naar vorige website.
-    if (loggedIn) {
-      window.history.pushState({ staaltool: "menu" }, "");
-    }
+    if (loggedIn) window.history.pushState({ staaltool: "menu" }, "");
   }
-
-  useEffect(() => {
-    if (!loggedIn) return;
-
-    // Zorgt dat één keer browser-terug niet direct van staaltool.nl af gaat.
-    window.history.replaceState({ staaltool: "start" }, "");
-    window.history.pushState({ staaltool: "active" }, "");
-
-    const onPopState = () => {
-      handleBrowserBack();
-    };
-
-    window.addEventListener("popstate", onPopState);
-
-    return () => {
-      window.removeEventListener("popstate", onPopState);
-    };
-  }, [loggedIn, selectedModule, pickerView]);
 
   function handleLogin(event) {
     event.preventDefault();
@@ -1033,8 +900,6 @@ export default function App() {
     setSearchError("");
     setPickbonLines([]);
     setPickbonNumber("");
-    setLogic4OrderNumber("");
-    setLogic4Message("");
     setConfirmLineId(null);
   }
 
@@ -1175,13 +1040,13 @@ export default function App() {
           if (index !== existingIndex) return line;
 
           const currentScanned = Number(line.scannedQuantity || 0);
-          const orderedQuantity = Number(line.quantity || 1);
+          const orderedQuantity = Number(line.originalQuantity || line.quantity || 1);
           const nextScanned = Math.min(currentScanned + 1, orderedQuantity);
           const hasScannedQuantity = line.scannedQuantity !== undefined;
 
           return {
             ...line,
-            quantity: hasScannedQuantity ? orderedQuantity : line.quantity + 1,
+            quantity: hasScannedQuantity ? orderedQuantity : Number(line.quantity || 1) + 1,
             scannedQuantity: hasScannedQuantity ? nextScanned : undefined,
             processed: hasScannedQuantity ? nextScanned >= orderedQuantity : line.processed,
             scannedAt
@@ -1238,83 +1103,6 @@ export default function App() {
       }))
     );
   }
-
-  function loadMockLogic4Order() {
-    const orderNumber = logic4OrderNumber.trim() || "L4-TEST-001";
-
-    const mockRows = [
-      {
-        articleCode: "24010110096300092",
-        description: "HEA 100 - 3000 mm - 2. Bruin",
-        type: "HEA",
-        size: "100",
-        length: 3000,
-        colorCode: "2",
-        colorName: "Bruin",
-        quantity: 2
-      },
-      {
-        articleCode: "2402021001003500911",
-        description: "HEB 100 - 3500 mm - 11. Rood",
-        type: "HEB",
-        size: "100",
-        length: 3500,
-        colorCode: "11",
-        colorName: "Rood",
-        quantity: 1
-      },
-      {
-        articleCode: "240402100504000914",
-        description: "IPE 100 - 4000 mm - 14. Zwart",
-        type: "IPE",
-        size: "100",
-        length: 4000,
-        colorCode: "14",
-        colorName: "Zwart",
-        quantity: 3
-      }
-    ];
-
-    addOrderRowsToPickbon(orderNumber, mockRows);
-    setLogic4Message("Testorder geladen. Scan de artikelen om de pickbon te verwerken.");
-    setSearchError("");
-  }
-
-  async function loadLogic4Order() {
-    const orderNumber = logic4OrderNumber.trim();
-
-    if (!orderNumber) {
-      setSearchError("Vul eerst een Logic4 ordernummer in.");
-      return;
-    }
-
-    try {
-      setLogic4Message("Order ophalen...");
-
-      const response = await fetch(`/api/logic4-order?orderNumber=${encodeURIComponent(orderNumber)}`);
-
-      if (!response.ok) {
-        throw new Error("Order kon niet worden opgehaald.");
-      }
-
-      const data = await response.json();
-
-      if (!data.rows || data.rows.length === 0) {
-        setSearchError("Geen orderregels gevonden voor deze Logic4 order.");
-        setLogic4Message("");
-        return;
-      }
-
-      addOrderRowsToPickbon(data.orderNumber || orderNumber, data.rows);
-      setLogic4Message("Logic4 order geladen.");
-      setSearchError("");
-    } catch (err) {
-      setLogic4Message("");
-      setSearchError("Logic4 order ophalen lukt nog niet. Gebruik nu de testorder of sluit later de API aan.");
-    }
-  }
-
-
 
   function handleManualSearch(event) {
     event.preventDefault();
@@ -1408,9 +1196,7 @@ export default function App() {
 
     if (confirmOrderAction === "finish") {
       setProcessedOrderIds((currentIds) =>
-        currentIds.includes(selectedPickerOrder.id)
-          ? currentIds
-          : [...currentIds, selectedPickerOrder.id]
+        currentIds.includes(selectedPickerOrder.id) ? currentIds : [...currentIds, selectedPickerOrder.id]
       );
 
       setSelectedPickerOrder((currentOrder) =>
@@ -1419,9 +1205,7 @@ export default function App() {
     }
 
     if (confirmOrderAction === "edit") {
-      setProcessedOrderIds((currentIds) =>
-        currentIds.filter((orderId) => orderId !== selectedPickerOrder.id)
-      );
+      setProcessedOrderIds((currentIds) => currentIds.filter((orderId) => orderId !== selectedPickerOrder.id));
 
       setSelectedPickerOrder((currentOrder) =>
         currentOrder ? { ...currentOrder, status: "Open" } : currentOrder
@@ -1444,6 +1228,7 @@ export default function App() {
   }
 
   function requestRemoveOrder(orderId) {
+    if (!orderId) return;
     setConfirmRemoveOrderId(orderId);
   }
 
@@ -1453,20 +1238,14 @@ export default function App() {
     const isUploadedOrder = uploadedPdfOrders.some((order) => order.id === confirmRemoveOrderId);
 
     if (isUploadedOrder) {
-      setUploadedPdfOrders((currentOrders) =>
-        currentOrders.filter((order) => order.id !== confirmRemoveOrderId)
-      );
+      setUploadedPdfOrders((currentOrders) => currentOrders.filter((order) => order.id !== confirmRemoveOrderId));
     } else {
       setHiddenDemoOrderIds((currentIds) =>
-        currentIds.includes(confirmRemoveOrderId)
-          ? currentIds
-          : [...currentIds, confirmRemoveOrderId]
+        currentIds.includes(confirmRemoveOrderId) ? currentIds : [...currentIds, confirmRemoveOrderId]
       );
     }
 
-    setProcessedOrderIds((currentIds) =>
-      currentIds.filter((orderId) => orderId !== confirmRemoveOrderId)
-    );
+    setProcessedOrderIds((currentIds) => currentIds.filter((orderId) => orderId !== confirmRemoveOrderId));
 
     if (selectedPickerOrder?.id === confirmRemoveOrderId) {
       const remainingOrders = effectivePickerOrders.filter((order) => order.id !== confirmRemoveOrderId);
@@ -1487,9 +1266,7 @@ export default function App() {
     if (!orderId || !nextDate) return;
 
     setUploadedPdfOrders((currentOrders) =>
-      currentOrders.map((order) =>
-        order.id === orderId ? { ...order, plannedDate: nextDate } : order
-      )
+      currentOrders.map((order) => (order.id === orderId ? { ...order, plannedDate: nextDate } : order))
     );
 
     setSelectedPickerOrder((currentOrder) =>
@@ -1506,19 +1283,6 @@ export default function App() {
 
   function removePickbonLine(lineId) {
     setPickbonLines((currentLines) => currentLines.filter((line) => line.id !== lineId));
-  }
-
-  function clearPickbon() {
-    setPickbonLines([]);
-    setPickbonNumber("");
-    setScanResult("");
-    setSearchError("");
-  }
-
-  function finishPickbon() {
-    setPickbonLines((currentLines) =>
-      currentLines.map((line) => ({ ...line, processed: true }))
-    );
   }
 
   function goBack() {
@@ -1550,12 +1314,12 @@ export default function App() {
   }
 
   function openPickerOrder(order) {
-    const effectiveOrder = order
-      ? {
-          ...order,
-          status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
-        }
-      : order;
+    if (!order) return;
+
+    const effectiveOrder = {
+      ...order,
+      status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
+    };
 
     window.history.pushState({ staaltool: "pickbon", orderId: effectiveOrder?.id || "" }, "");
     setSelectedPickerOrder(effectiveOrder);
@@ -1570,16 +1334,16 @@ export default function App() {
             currentLines.map((line) => ({
               ...line,
               processed: true,
-              scannedQuantity: line.scannedQuantity !== undefined ? line.quantity : line.scannedQuantity
+              scannedQuantity: line.scannedQuantity !== undefined ? Number(line.originalQuantity || line.quantity || 1) : line.scannedQuantity
             }))
           );
         }, 0);
       }
     } else {
       setPickbonNumber(effectiveOrder?.id || "");
+      setPickbonLines([]);
     }
 
-    setLogic4Message("");
     setSearchError("");
   }
 
@@ -1603,38 +1367,30 @@ export default function App() {
     try {
       const reader = new BrowserMultiFormatReader();
 
-      const controls = await reader.decodeFromVideoDevice(
-        undefined,
-        "video-preview",
-        (result) => {
-          if (!result) return;
+      const controls = await reader.decodeFromVideoDevice(undefined, "video-preview", (result) => {
+        if (!result) return;
+        if (scanLockRef.current) return;
 
-          if (scanLockRef.current) return;
-          scanLockRef.current = true;
+        scanLockRef.current = true;
 
-          const text = result.getText();
-          setScanResult(text);
+        const text = result.getText();
+        setScanResult(text);
 
-          const found = selectedModule === "Artikelzoeker"
-            ? addCodeToPickbon(text)
-            : fillArticleFromCode(text);
+        const found = selectedModule === "Artikelzoeker" ? addCodeToPickbon(text) : fillArticleFromCode(text);
 
-          if (!found) {
-            setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
-          }
+        if (!found) setSearchError("Barcode gelezen, maar artikelcode niet herkend: " + text);
 
-          if (controlsRef.current) {
-            controlsRef.current.stop();
-            controlsRef.current = null;
-          }
-
-          setScanning(false);
-
-          window.setTimeout(() => {
-            scanLockRef.current = false;
-          }, 800);
+        if (controlsRef.current) {
+          controlsRef.current.stop();
+          controlsRef.current = null;
         }
-      );
+
+        setScanning(false);
+
+        window.setTimeout(() => {
+          scanLockRef.current = false;
+        }, 800);
+      });
 
       controlsRef.current = controls;
     } catch (err) {
@@ -1650,28 +1406,10 @@ export default function App() {
       <div style={styles.loginPage}>
         <form style={styles.loginCard} onSubmit={handleLogin}>
           <img src="/logo.png" alt="logo" style={styles.loginLogo} />
-
           <h2 style={styles.loginTitle}>LOGIN</h2>
-
-          <input
-            style={styles.loginInput}
-            placeholder="Gebruikersnaam"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-          />
-
-          <input
-            style={styles.loginInput}
-            type="password"
-            placeholder="Wachtwoord"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          <button style={styles.loginButton} type="submit">
-            Inloggen
-          </button>
-
+          <input style={styles.loginInput} placeholder="Gebruikersnaam" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input style={styles.loginInput} type="password" placeholder="Wachtwoord" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button style={styles.loginButton} type="submit">Inloggen</button>
           {error && <p style={styles.loginError}>{error}</p>}
         </form>
       </div>
@@ -1705,9 +1443,7 @@ export default function App() {
             </button>
           </div>
 
-          <button style={styles.menuLogoutButton} onClick={logout}>
-            Uitloggen
-          </button>
+          <button style={styles.menuLogoutButton} onClick={logout}>Uitloggen</button>
         </div>
       </div>
     );
@@ -1717,104 +1453,45 @@ export default function App() {
     <div style={styles.appPage}>
       <style>{`
         @media (max-width: 980px) {
-          .picker-home-responsive {
-            grid-template-columns: 1fr !important;
-          }
-
-          .calendar-grid-responsive {
-            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          }
+          .picker-home-responsive { grid-template-columns: 1fr !important; }
+          .calendar-grid-responsive { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         }
 
         @media (max-width: 640px) {
-          .mobile-agenda-panel {
-            padding: 12px !important;
-          }
-
-          .mobile-agenda-panel h2 {
-            font-size: 20px !important;
-          }
-
-          .mobile-agenda-panel .week-nav-responsive {
-            margin-top: 8px !important;
-          }
-
-          .app-header-responsive {
-            align-items: stretch !important;
-          }
-
-          .app-brand-responsive {
-            width: 100% !important;
-          }
-
+          .mobile-agenda-panel { padding: 12px !important; }
+          .mobile-agenda-panel h2 { font-size: 20px !important; }
+          .mobile-agenda-panel .week-nav-responsive { margin-top: 8px !important; }
+          .app-header-responsive { align-items: stretch !important; }
+          .app-brand-responsive { width: 100% !important; }
           .app-actions-responsive {
             width: 100% !important;
             display: grid !important;
             grid-template-columns: 1fr 1fr !important;
           }
-
-          .app-actions-responsive button {
-            width: 100% !important;
-          }
-
-          .picker-home-responsive {
-            grid-template-columns: 1fr !important;
-            gap: 10px !important;
-          }
-
-          .calendar-grid-responsive {
-            grid-template-columns: 1fr !important;
-          }
-
-          .calendar-grid-responsive > div {
-            min-height: 92px !important;
-            padding: 10px !important;
-          }
-
-          .calendar-grid-responsive button {
-            padding: 8px !important;
-            margin-bottom: 6px !important;
-          }
-
-          .calendar-grid-responsive p {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-          }
-
+          .app-actions-responsive button { width: 100% !important; }
+          .picker-home-responsive { grid-template-columns: 1fr !important; gap: 10px !important; }
+          .calendar-grid-responsive { grid-template-columns: 1fr !important; }
+          .calendar-grid-responsive > div { min-height: 92px !important; padding: 10px !important; }
+          .calendar-grid-responsive button { padding: 8px !important; margin-bottom: 6px !important; }
           .week-nav-responsive {
             width: 100% !important;
             justify-content: stretch !important;
             display: grid !important;
             grid-template-columns: 1fr !important;
           }
-
-          .week-nav-responsive button {
-            width: 100% !important;
-          }
-
-          .selected-order-responsive {
-            align-items: stretch !important;
-          }
-
-          .selected-order-responsive button {
-            width: 100% !important;
-          }
-
-          .pickbon-line-responsive {
-            flex-direction: column !important;
-          }
-
+          .week-nav-responsive button { width: 100% !important; }
+          .selected-order-responsive { align-items: stretch !important; }
+          .selected-order-responsive button { width: 100% !important; }
+          .pickbon-line-responsive { flex-direction: column !important; }
           .pickbon-controls-responsive {
             width: 100% !important;
             display: grid !important;
             grid-template-columns: 1fr 1fr !important;
           }
-
-          .pickbon-controls-responsive input {
-            width: 100% !important;
-          }
+          .pickbon-controls-responsive input { width: 100% !important; }
         }
       `}</style>
+
       <div style={styles.appShell}>
         <header style={styles.header} className="app-header-responsive">
           <div style={styles.brandRow} className="app-brand-responsive">
@@ -1840,23 +1517,12 @@ export default function App() {
 
         {scanning && (
           <div style={styles.scannerPanel}>
-            <video
-              id="video-preview"
-              style={styles.videoPreview}
-              autoPlay
-              muted
-              playsInline
-            ></video>
+            <video id="video-preview" style={styles.videoPreview} autoPlay muted playsInline></video>
             <button style={styles.stopButton} onClick={stopScanner}>Scanner stoppen</button>
           </div>
         )}
 
-        {scanResult && (
-          <div style={styles.scanResult}>
-            Gescande / ingevoerde code: <strong>{scanResult}</strong>
-          </div>
-        )}
-
+        {scanResult && <div style={styles.scanResult}>Gescande / ingevoerde code: <strong>{scanResult}</strong></div>}
         {scanError && <div style={styles.scanError}>{scanError}</div>}
         {searchError && <div style={styles.scanError}>{searchError}</div>}
 
@@ -1864,17 +1530,10 @@ export default function App() {
           <div style={styles.confirmOverlay}>
             <div style={styles.confirmModal}>
               <h2 style={styles.confirmTitle}>Controle artikel</h2>
-              <p style={styles.confirmText}>
-                Weet u zeker dat u het juiste artikel heeft?
-              </p>
-
+              <p style={styles.confirmText}>Weet u zeker dat u het juiste artikel heeft?</p>
               <div style={styles.confirmActions}>
-                <button style={styles.confirmNoButton} onClick={cancelProcessLine}>
-                  Nee
-                </button>
-                <button style={styles.confirmYesButton} onClick={confirmProcessLine}>
-                  Ja
-                </button>
+                <button style={styles.confirmNoButton} onClick={cancelProcessLine}>Nee</button>
+                <button style={styles.confirmYesButton} onClick={confirmProcessLine}>Ja</button>
               </div>
             </div>
           </div>
@@ -1883,22 +1542,15 @@ export default function App() {
         {confirmOrderAction && (
           <div style={styles.confirmOverlay}>
             <div style={styles.confirmModal}>
-              <h2 style={styles.confirmTitle}>
-                {confirmOrderAction === "finish" ? "Order verwerken" : "Order aanpassen"}
-              </h2>
+              <h2 style={styles.confirmTitle}>{confirmOrderAction === "finish" ? "Order verwerken" : "Order aanpassen"}</h2>
               <p style={styles.confirmText}>
                 {confirmOrderAction === "finish"
                   ? "Weet u zeker dat deze order volledig verwerkt is?"
                   : "Weet u zeker dat u deze verwerkte order wilt aanpassen?"}
               </p>
-
               <div style={styles.confirmActions}>
-                <button style={styles.confirmNoButton} onClick={cancelOrderAction}>
-                  Nee
-                </button>
-                <button style={styles.confirmYesButton} onClick={confirmOrderActionNow}>
-                  Ja
-                </button>
+                <button style={styles.confirmNoButton} onClick={cancelOrderAction}>Nee</button>
+                <button style={styles.confirmYesButton} onClick={confirmOrderActionNow}>Ja</button>
               </div>
             </div>
           </div>
@@ -1908,17 +1560,10 @@ export default function App() {
           <div style={styles.confirmOverlay}>
             <div style={styles.confirmModal}>
               <h2 style={styles.confirmTitle}>Order uit lijst halen</h2>
-              <p style={styles.confirmText}>
-                Weet u zeker dat u deze order uit het overzicht wilt halen?
-              </p>
-
+              <p style={styles.confirmText}>Weet u zeker dat u deze order uit het overzicht wilt halen?</p>
               <div style={styles.confirmActions}>
-                <button style={styles.confirmNoButton} onClick={cancelRemoveOrder}>
-                  Nee
-                </button>
-                <button style={styles.confirmYesButton} onClick={confirmRemoveOrder}>
-                  Ja
-                </button>
+                <button style={styles.confirmNoButton} onClick={cancelRemoveOrder}>Nee</button>
+                <button style={styles.confirmYesButton} onClick={confirmRemoveOrder}>Ja</button>
               </div>
             </div>
           </div>
@@ -1937,9 +1582,9 @@ export default function App() {
                   style={styles.orderSearchInput}
                   value={pickerOrderQuery}
                   onChange={(e) => {
-                  setPickerOrderQuery(e.target.value);
-                  setPickerOrderPage(1);
-                }}
+                    setPickerOrderQuery(e.target.value);
+                    setPickerOrderPage(1);
+                  }}
                   placeholder="Zoek order of klant..."
                 />
               </div>
@@ -1953,33 +1598,19 @@ export default function App() {
 
                 <label style={styles.pdfUploadButton}>
                   PDF kiezen
-                  <input
-                    type="file"
-                    accept="application/pdf"
-                    style={{ display: "none" }}
-                    onChange={handlePdfUpload}
-                  />
+                  <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={handlePdfUpload} />
                 </label>
 
                 {pdfUploadMessage && <div style={styles.pdfUploadMessage}>{pdfUploadMessage}</div>}
 
                 {lastUploadedOrderId && (
                   <div style={styles.pdfDatePanel}>
-                    <label style={styles.pdfDateLabel}>
-                      Plandatum voor order {lastUploadedOrderId}
-                    </label>
+                    <label style={styles.pdfDateLabel}>Plandatum voor order {lastUploadedOrderId}</label>
                     <input
                       style={styles.pdfDateInput}
                       type="date"
-                      value={
-                        uploadedPdfOrders.find((order) => order.id === lastUploadedOrderId)?.plannedDate ||
-                        toIsoDate(new Date())
-                      }
-                      onChange={(event) =>
-                        updateUploadedOrderDate(lastUploadedOrderId, event.target.value, {
-                          clearUploadDatePicker: true
-                        })
-                      }
+                      value={uploadedPdfOrders.find((order) => order.id === lastUploadedOrderId)?.plannedDate || toIsoDate(new Date())}
+                      onChange={(event) => updateUploadedOrderDate(lastUploadedOrderId, event.target.value, { clearUploadDatePicker: true })}
                     />
                   </div>
                 )}
@@ -1988,9 +1619,7 @@ export default function App() {
               <div style={styles.allOrdersPanel}>
                 <div style={styles.orderColumnHeader}>
                   <h3 style={styles.orderColumnTitle}>Alle orders</h3>
-                  <span style={styles.orderCountBadge}>
-                    {allFilteredPickerOrders.length}
-                  </span>
+                  <span style={styles.orderCountBadge}>{allFilteredPickerOrders.length}</span>
                 </div>
 
                 <div style={styles.orderList}>
@@ -2031,9 +1660,7 @@ export default function App() {
                         <div
                           style={{
                             ...styles.orderProgressFill,
-                            width: `${getOrderProgress(order).total
-                              ? (getOrderProgress(order).done / getOrderProgress(order).total) * 100
-                              : 0}%`
+                            width: `${getOrderProgress(order).total ? (getOrderProgress(order).done / getOrderProgress(order).total) * 100 : 0}%`
                           }}
                         />
                       </div>
@@ -2056,23 +1683,11 @@ export default function App() {
 
                 {pickerOrderPageCount > 1 && (
                   <div style={styles.paginationRow}>
-                    <button
-                      style={styles.smallLightButton}
-                      disabled={safePickerOrderPage <= 1}
-                      onClick={() => setPickerOrderPage((page) => Math.max(1, page - 1))}
-                    >
+                    <button style={styles.smallLightButton} disabled={safePickerOrderPage <= 1} onClick={() => setPickerOrderPage((page) => Math.max(1, page - 1))}>
                       Vorige
                     </button>
-
-                    <span style={styles.paginationText}>
-                      Pagina {safePickerOrderPage} van {pickerOrderPageCount}
-                    </span>
-
-                    <button
-                      style={styles.smallLightButton}
-                      disabled={safePickerOrderPage >= pickerOrderPageCount}
-                      onClick={() => setPickerOrderPage((page) => Math.min(pickerOrderPageCount, page + 1))}
-                    >
+                    <span style={styles.paginationText}>Pagina {safePickerOrderPage} van {pickerOrderPageCount}</span>
+                    <button style={styles.smallLightButton} disabled={safePickerOrderPage >= pickerOrderPageCount} onClick={() => setPickerOrderPage((page) => Math.min(pickerOrderPageCount, page + 1))}>
                       Volgende
                     </button>
                   </div>
@@ -2090,24 +1705,9 @@ export default function App() {
                   </div>
 
                   <div style={styles.weekNav} className="week-nav-responsive">
-                    <button
-                      style={styles.smallLightButton}
-                      onClick={() => setPickerWeekStart((current) => addWeeks(current, -1))}
-                    >
-                      Vorige week
-                    </button>
-                    <button
-                      style={styles.smallDarkButton}
-                      onClick={() => setPickerWeekStart(startOfWeek(new Date()))}
-                    >
-                      Deze week
-                    </button>
-                    <button
-                      style={styles.smallLightButton}
-                      onClick={() => setPickerWeekStart((current) => addWeeks(current, 1))}
-                    >
-                      Volgende week
-                    </button>
+                    <button style={styles.smallLightButton} onClick={() => setPickerWeekStart((current) => addWeeks(current, -1))}>Vorige week</button>
+                    <button style={styles.smallDarkButton} onClick={() => setPickerWeekStart(startOfWeek(new Date()))}>Deze week</button>
+                    <button style={styles.smallLightButton} onClick={() => setPickerWeekStart((current) => addWeeks(current, 1))}>Volgende week</button>
                   </div>
                 </div>
 
@@ -2130,41 +1730,34 @@ export default function App() {
                 )}
 
                 <div style={styles.calendarGrid} className="calendar-grid-responsive">
-                  {pickerWeekDays.map((day, index) => {
+                  {pickerWeekDays.map((day) => {
                     const isToday = isSameDate(day.date, today);
-                    const showOrders = isToday || index === 0;
+                    const dayOrders = visiblePickerOrders.filter((order) => isSameDate(getOrderDate(order), day.date));
 
                     return (
-                      <div
-                        key={day.label}
-                        style={isToday ? styles.calendarDayActive : styles.calendarDay}
-                      >
+                      <div key={day.label} style={isToday ? styles.calendarDayActive : styles.calendarDay}>
                         <div style={styles.calendarDayHeader}>
                           <div>
                             <p style={styles.calendarDayName}>{day.dag}</p>
                             <p style={styles.calendarDate}>{day.datum}</p>
                           </div>
-                          <span style={styles.calendarCount}>
-                            {visiblePickerOrders.filter((order) => isSameDate(getOrderDate(order), day.date)).length}
-                          </span>
+                          <span style={styles.calendarCount}>{dayOrders.length}</span>
                         </div>
 
-                        {visiblePickerOrders
-                          .filter((order) => isSameDate(getOrderDate(order), day.date))
-                          .map((order) => (
-                            <button
-                              key={order.id}
-                              style={{
-                                ...styles.calendarOrder,
-                                background: order.status === "Gereed" ? "#16a34a" : "#eab308",
-                                color: order.status === "Gereed" ? "white" : "#0f172a"
-                              }}
-                              onClick={() => openPickerOrder(order)}
-                            >
-                              <span style={styles.calendarOrderTime}>{order.tijd}</span>
-                              <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
-                            </button>
-                          ))}
+                        {dayOrders.map((order) => (
+                          <button
+                            key={order.id}
+                            style={{
+                              ...styles.calendarOrder,
+                              background: order.status === "Gereed" ? "#16a34a" : "#eab308",
+                              color: order.status === "Gereed" ? "white" : "#0f172a"
+                            }}
+                            onClick={() => openPickerOrder(order)}
+                          >
+                            <span style={styles.calendarOrderTime}>{order.klant || order.tijd}</span>
+                            <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
+                          </button>
+                        ))}
                       </div>
                     );
                   })}
@@ -2183,29 +1776,18 @@ export default function App() {
                   </div>
 
                   <div style={styles.selectedOrderButtons}>
-                    <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>
-                      Pickbon openen
-                    </button>
-                    <button
-                      style={styles.removeSelectedOrderButton}
-                      onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}
-                    >
-                      Uit lijst halen
-                    </button>
+                    <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
+                    <button style={styles.removeSelectedOrderButton} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
                   </div>
                 </div>
               </section>
             </section>
           </section>
-        ) : selectedModule === "Artikelzoeker" && step !== "result" ? (
+        ) : selectedModule === "Artikelzoeker" && pickerView === "pickbon" ? (
           <>
             <div style={styles.pickerBackRow}>
-              <button style={styles.backButton} onClick={backToPickerPlanning}>
-                Terug naar planning
-              </button>
-              <button style={styles.backButton} onClick={goToMenu}>
-                Terug naar menu
-              </button>
+              <button style={styles.backButton} onClick={backToPickerPlanning}>Terug naar planning</button>
+              <button style={styles.backButton} onClick={goToMenu}>Terug naar menu</button>
             </div>
 
             <section style={styles.twoColumn}>
@@ -2213,9 +1795,7 @@ export default function App() {
                 <div style={styles.pickbonHeader}>
                   <div>
                     <p style={styles.label}>Pickbon</p>
-                    <h2 style={styles.sectionTitle}>
-                      {pickbonNumber || "Nieuwe pickbon"}
-                    </h2>
+                    <h2 style={styles.sectionTitle}>{pickbonNumber || "Nieuwe pickbon"}</h2>
                   </div>
 
                   <div style={styles.pickbonActions}>
@@ -2229,9 +1809,7 @@ export default function App() {
                       <strong>Alle regels zijn verwerkt.</strong>
                       <span> Zet de volledige order nu op verwerkt.</span>
                     </div>
-                    <button style={styles.finishOrderButton} onClick={requestFinishOrder}>
-                      Verwerken
-                    </button>
+                    <button style={styles.finishOrderButton} onClick={requestFinishOrder}>Verwerken</button>
                   </div>
                 )}
 
@@ -2241,9 +1819,7 @@ export default function App() {
                       <strong>✓ Order verwerkt.</strong>
                       <span> Deze order staat als verwerkt in planning en overzicht.</span>
                     </div>
-                    <button style={styles.editProcessedOrderButton} onClick={requestEditProcessedOrder}>
-                      Order aanpassen
-                    </button>
+                    <button style={styles.editProcessedOrderButton} onClick={requestEditProcessedOrder}>Order aanpassen</button>
                   </div>
                 )}
 
@@ -2254,17 +1830,13 @@ export default function App() {
                       style={styles.pdfDateInput}
                       type="date"
                       value={currentSelectedPickerOrder?.plannedDate || toIsoDate(new Date())}
-                      onChange={(event) =>
-                        updateUploadedOrderDate(currentSelectedPickerOrder.id, event.target.value)
-                      }
+                      onChange={(event) => updateUploadedOrderDate(currentSelectedPickerOrder.id, event.target.value)}
                     />
                   </div>
                 )}
 
                 {pickbonLines.length === 0 ? (
-                  <div style={styles.emptyPickbon}>
-                    Nog geen artikelen gescand. Scan een barcode of voer handmatig een artikelcode in.
-                  </div>
+                  <div style={styles.emptyPickbon}>Nog geen artikelen gescand. Scan een barcode of voer handmatig een artikelcode in.</div>
                 ) : (
                   <div style={styles.pickbonList}>
                     {pickbonLines.map((line) => (
@@ -2280,11 +1852,6 @@ export default function App() {
                               {line.processed ? "✓ Verwerkt" : `Nog te verwerken: ${Number(line.originalQuantity || line.quantity || 0) - Number(line.scannedQuantity || 0)}`}
                             </span>
                           )}
-                          {line.scannedQuantity !== undefined && (
-                            <span style={styles.pickbonMeta}>
-                              Gescand: {line.scannedQuantity} / {line.quantity}
-                            </span>
-                          )}
                           <span style={styles.pickbonMeta}>Laatst gescand: {line.scannedAt}</span>
                         </div>
 
@@ -2296,51 +1863,45 @@ export default function App() {
                               type="number"
                               min="1"
                               max={Math.max(1, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))}
-                              value={Math.min(
-                                Number(line.quantity || 1),
-                                Math.max(1, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))
-                              )}
+                              value={Math.min(Number(line.quantity || 1), Math.max(1, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0)))}
                               onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                             />
-                            <span style={styles.qtyMaxText}>
-                              resterend: {Math.max(0, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))}
-                            </span>
+                            <span style={styles.qtyMaxText}>resterend: {Math.max(0, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))}</span>
                           </div>
 
                           {!line.processed && Number(line.scannedQuantity || 0) < Number(line.originalQuantity || line.quantity || 1) && (
-                            <button style={styles.smallScanButton} onClick={startScanner}>
-                              Scan
-                            </button>
+                            <button style={styles.smallScanButton} onClick={startScanner}>Scan</button>
                           )}
 
                           {line.processed ? (
-                            <button style={styles.smallDoneButton} onClick={() => togglePickbonProcessed(line.id)}>
-                              ✓ Verwerkt
-                            </button>
+                            <button style={styles.smallDoneButton} onClick={() => togglePickbonProcessed(line.id)}>✓ Verwerkt</button>
                           ) : Number(line.scannedQuantity || 0) < Number(line.originalQuantity || line.quantity || 1) ? (
-                            <button style={styles.smallDarkButton} onClick={() => requestProcessLine(line.id)}>
-                              Verwerken
-                            </button>
+                            <button style={styles.smallDarkButton} onClick={() => requestProcessLine(line.id)}>Verwerken</button>
                           ) : (
-                            <button style={styles.smallDoneButton}>
-                              ✓ Compleet
-                            </button>
+                            <button style={styles.smallDoneButton}>✓ Compleet</button>
                           )}
 
-                          <button style={styles.smallDangerButton} onClick={() => removePickbonLine(line.id)}>
-                            Verwijder
-                          </button>
+                          <button style={styles.smallDangerButton} onClick={() => removePickbonLine(line.id)}>Verwijder</button>
                         </div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
-
             </section>
           </>
         ) : (
           <>
+            <form style={styles.manualSearchPanel} onSubmit={handleManualSearch}>
+              <input
+                style={styles.manualSearchInput}
+                value={manualCode}
+                onChange={(event) => setManualCode(event.target.value)}
+                placeholder="Voer artikelcode handmatig in..."
+              />
+              <button style={styles.smallDarkButton} type="submit">Zoeken</button>
+            </form>
+
             <div style={styles.steps}>
               <div style={step === "types" ? styles.activeStep : styles.step}>1. Soort</div>
               <div style={step === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
@@ -2349,11 +1910,7 @@ export default function App() {
               <div style={step === "colors" || step === "result" ? styles.activeStep : styles.step}>5. Kleur</div>
             </div>
 
-            {step !== "types" && (
-              <button style={styles.backButton} onClick={goBack}>
-                Terug
-              </button>
-            )}
+            {step !== "types" && <button style={styles.backButton} onClick={goBack}>Terug</button>}
 
             {step === "types" && (
               <section style={styles.grid}>
@@ -2370,21 +1927,14 @@ export default function App() {
               <section>
                 <div style={styles.panel}>
                   <h2 style={styles.sectionTitle}>{type} maten</h2>
-                  <input
-                    style={styles.searchInput}
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Zoek maat..."
-                  />
+                  <input style={styles.searchInput} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Zoek maat..." />
                 </div>
 
                 <div style={styles.grid}>
                   {filteredSizes.map((item) => (
                     <button key={item} style={styles.cardButton} onClick={() => chooseSize(item)}>
                       <span style={styles.cardTitle}>{type} {item}</span>
-                      <span style={styles.cardText}>
-                        {type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}
-                      </span>
+                      <span style={styles.cardText}>{type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}</span>
                     </button>
                   ))}
                 </div>
@@ -2414,31 +1964,10 @@ export default function App() {
                 <div style={styles.panel}>
                   <p style={styles.label}>Gekozen profiel</p>
                   <h2 style={styles.bigTitle}>{type} {size}</h2>
-
                   <label style={styles.inputLabel}>Gewenste lengte in mm</label>
-                  <input
-                    style={styles.lengthInput}
-                    type="number"
-                    min="1000"
-                    max="20000"
-                    step="50"
-                    value={lengthMm}
-                    onChange={(e) => setLengthMm(Number(e.target.value))}
-                  />
-
-                  {!lengthIsValid && (
-                    <div style={styles.warning}>
-                      Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm.
-                    </div>
-                  )}
-
-                  <button
-                    style={lengthIsValid ? styles.primaryButton : styles.disabledButton}
-                    disabled={!lengthIsValid}
-                    onClick={() => setStep("colors")}
-                  >
-                    Verder naar kleur
-                  </button>
+                  <input style={styles.lengthInput} type="number" min="1000" max="20000" step="50" value={lengthMm} onChange={(e) => setLengthMm(Number(e.target.value))} />
+                  {!lengthIsValid && <div style={styles.warning}>Lengte moet tussen 1000 en 20000 mm liggen en in stappen van 50 mm.</div>}
+                  <button style={lengthIsValid ? styles.primaryButton : styles.disabledButton} disabled={!lengthIsValid} onClick={() => setStep("colors")}>Verder naar kleur</button>
                 </div>
               </section>
             )}
@@ -2475,28 +2004,15 @@ export default function App() {
                 <div style={styles.panel}>
                   <p style={styles.label}>Samenvatting</p>
                   <h2 style={styles.bigTitle}>{type} {size}</h2>
-
                   <p style={styles.summaryLine}>Lengte: {lengthMm} mm</p>
                   <p style={styles.summaryLine}>Kleur: {colorCode}. {colorName}</p>
-
-                  <button style={styles.primaryButton} onClick={resetTool}>
-                    {selectedModule === "Artikelzoeker" ? "Nieuwe zoekopdracht" : "Nieuwe code maken"}
-                  </button>
+                  <button style={styles.primaryButton} onClick={resetTool}>{selectedModule === "Artikelzoeker" ? "Nieuwe zoekopdracht" : "Nieuwe code maken"}</button>
                 </div>
 
                 <div style={styles.resultPanel}>
                   <h2 style={styles.resultTitle}>{articleCode ? "Artikel gevonden" : "Geen artikelcode"}</h2>
-
                   <p style={styles.resultLabel}>Artikelcode</p>
-
-                  {articleCode ? (
-                    <div style={styles.articleCode}>{articleCode}</div>
-                  ) : (
-                    <div style={styles.warningDark}>
-                      Voor deze combinatie is nog geen stamcode toegevoegd.
-                    </div>
-                  )}
-
+                  {articleCode ? <div style={styles.articleCode}>{articleCode}</div> : <div style={styles.warningDark}>Voor deze combinatie is nog geen stamcode toegevoegd.</div>}
                   <p style={styles.resultLabel}>Barcode</p>
                   <BarcodeView value={articleCode} />
                 </div>
@@ -2764,6 +2280,23 @@ const styles = {
     padding: 12,
     marginBottom: 12
   },
+  manualSearchPanel: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 8,
+    background: "white",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)"
+  },
+  manualSearchInput: {
+    border: "1px solid #cbd5e1",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    minWidth: 0
+  },
   steps: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))",
@@ -2896,18 +2429,6 @@ const styles = {
     border: "none",
     borderRadius: 14,
     background: "#ff7a00",
-    color: "white",
-    padding: "14px 16px",
-    fontWeight: 800,
-    cursor: "pointer",
-    fontSize: 16
-  },
-  secondaryButton: {
-    marginTop: 10,
-    width: "100%",
-    border: "none",
-    borderRadius: 14,
-    background: "#1234aa",
     color: "white",
     padding: "14px 16px",
     fontWeight: 800,
@@ -3099,15 +2620,6 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer"
   },
-  smallOrangeButton: {
-    border: "none",
-    borderRadius: 10,
-    background: "#ff7a00",
-    color: "white",
-    padding: "10px 12px",
-    fontWeight: 800,
-    cursor: "pointer"
-  },
   smallDangerButton: {
     border: "none",
     borderRadius: 10,
@@ -3117,44 +2629,13 @@ const styles = {
     fontWeight: 800,
     cursor: "pointer"
   },
-  logic4Box: {
-    background: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 16
-  },
-  logic4Actions: {
-    display: "grid",
-    gridTemplateColumns: "1fr",
-    gap: 8
-  },
-  logic4Message: {
-    background: "#dcfce7",
-    color: "#166534",
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 10,
-    fontWeight: 700
-  },
-  pickerLayout: {
-    display: "grid",
-    gridTemplateColumns: "380px 1fr",
-    gap: 14,
-    alignItems: "start"
-  },
-  orderListPanel: {
-    background: "white",
-    borderRadius: 18,
-    padding: 16,
-    boxShadow: "0 8px 24px rgba(15,23,42,0.10)"
-  },
   pickerPanelHeader: {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 12
+    marginBottom: 12,
+    flexWrap: "wrap"
   },
   orderCountBadge: {
     background: "#dbeafe",
@@ -3169,25 +2650,6 @@ const styles = {
     flexDirection: "column",
     gap: 10,
     marginTop: 12
-  },
-  orderCard: {
-    width: "100%",
-    background: "white",
-    border: "1px solid #e2e8f0",
-    borderRadius: 16,
-    padding: 14,
-    textAlign: "left",
-    cursor: "pointer"
-  },
-  orderCardActive: {
-    width: "100%",
-    background: "#eff6ff",
-    border: "1px solid #1234aa",
-    borderRadius: 16,
-    padding: 14,
-    textAlign: "left",
-    cursor: "pointer",
-    boxShadow: "0 8px 20px rgba(18,52,170,0.12)"
   },
   orderCardTop: {
     display: "flex",
@@ -3207,17 +2669,6 @@ const styles = {
     color: "#334155",
     fontSize: 14,
     fontWeight: 800
-  },
-  orderStatus: {
-    color: "white",
-    borderRadius: 999,
-    padding: "6px 10px",
-    fontSize: 12,
-    fontWeight: 900
-  },
-  agendaToggle: {
-    display: "flex",
-    gap: 8
   },
   smallLightButton: {
     border: "none",
@@ -3269,8 +2720,10 @@ const styles = {
   calendarOrderTime: {
     display: "block",
     fontSize: 12,
-    opacity: 0.9,
-    marginBottom: 2
+    opacity: 0.95,
+    marginBottom: 2,
+    fontWeight: 900,
+    overflowWrap: "anywhere"
   },
   selectedOrderPanel: {
     background: "#1234aa",
@@ -3329,20 +2782,6 @@ const styles = {
     fontSize: 22,
     color: "#0f172a",
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
-  },
-  todoBadge: {
-    background: "#eab308",
-    color: "#0f172a",
-    borderRadius: 999,
-    padding: "6px 11px",
-    fontWeight: 900
-  },
-  doneBadge: {
-    background: "#16a34a",
-    color: "white",
-    borderRadius: 999,
-    padding: "6px 11px",
-    fontWeight: 900
   },
   todoOrderCard: {
     width: "100%",
@@ -3415,26 +2854,6 @@ const styles = {
     fontSize: 13,
     fontWeight: 900,
     width: "fit-content"
-  },
-  orderSplitGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 14,
-    minHeight: 520
-  },
-  todoOrdersPanel: {
-    background: "#fef9c3",
-    border: "1px solid #fde047",
-    borderRadius: 18,
-    padding: 14,
-    minHeight: 520
-  },
-  doneOrdersPanel: {
-    background: "#dcfce7",
-    border: "1px solid #86efac",
-    borderRadius: 18,
-    padding: 14,
-    minHeight: 520
   },
   agendaPanel: {
     display: "flex",
@@ -3566,19 +2985,6 @@ const styles = {
     whiteSpace: "nowrap",
     fontWeight: 800,
     color: "#334155"
-  },
-  scanUnderPickbonPanel: {
-    background: "white",
-    borderRadius: 18,
-    padding: 18,
-    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
-    marginBottom: 12
-  },
-  scanUnderPickbonTitle: {
-    margin: "6px 0 16px",
-    color: "#1234aa",
-    fontSize: 24,
-    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
   },
   smallDoneButton: {
     border: "none",
@@ -3833,16 +3239,6 @@ const styles = {
     color: "#0f172a",
     background: "white"
   },
-  selectedDateEdit: {
-    display: "grid",
-    gridTemplateColumns: "1fr auto",
-    gap: 10,
-    alignItems: "center",
-    background: "rgba(255,255,255,0.12)",
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12
-  },
   pickbonDateEdit: {
     display: "grid",
     gridTemplateColumns: "auto minmax(150px, 220px)",
@@ -3855,5 +3251,5 @@ const styles = {
     marginTop: 10,
     marginBottom: 12,
     maxWidth: 380
-  },
+  }
 };
