@@ -500,7 +500,11 @@ export default function App() {
         status: processedOrderIds.includes(selectedPickerOrder.id) ? "Gereed" : selectedPickerOrder.status
       }
     : selectedPickerOrder;
-  const allPickbonLinesProcessed = pickbonLines.length > 0 && pickbonLines.every((line) => line.processed);
+  const allPickbonLinesProcessed = pickbonLines.length > 0 && pickbonLines.every((line) => {
+    const orderedQuantity = Number(line.quantity || 1);
+    const scannedQuantity = line.scannedQuantity !== undefined ? Number(line.scannedQuantity || 0) : orderedQuantity;
+    return line.processed && scannedQuantity >= orderedQuantity;
+  });
 
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
@@ -840,16 +844,21 @@ export default function App() {
     if (!confirmLineId) return;
 
     setPickbonLines((currentLines) =>
-      currentLines.map((line) =>
-        line.id === confirmLineId
-          ? {
-              ...line,
-              processed: true,
-              scannedQuantity: line.scannedQuantity !== undefined ? line.quantity : line.scannedQuantity,
-              scannedAt: new Date().toLocaleString("nl-NL")
-            }
-          : line
-      )
+      currentLines.map((line) => {
+        if (line.id !== confirmLineId) return line;
+
+        const orderedQuantity = Number(line.quantity || 1);
+        const currentScanned = Number(line.scannedQuantity || 0);
+        const nextScanned = Math.min(currentScanned + 1, orderedQuantity);
+        const hasQuantityTracking = line.scannedQuantity !== undefined;
+
+        return {
+          ...line,
+          scannedQuantity: hasQuantityTracking ? nextScanned : line.scannedQuantity,
+          processed: hasQuantityTracking ? nextScanned >= orderedQuantity : true,
+          scannedAt: new Date().toLocaleString("nl-NL")
+        };
+      })
     );
 
     setConfirmLineId(null);
@@ -1534,9 +1543,7 @@ export default function App() {
                   </div>
 
                   <div style={styles.pickbonActions}>
-                    <button style={styles.smallOrangeButton} onClick={clearPickbon} disabled={pickbonLines.length === 0}>
-                      Pickbon leegmaken
-                    </button>
+                    <span style={styles.pickbonLockedText}>Pickbon kan alleen volledig verwerkt worden.</span>
                   </div>
                 </div>
 
@@ -3075,5 +3082,10 @@ const styles = {
     fontWeight: 900,
     cursor: "pointer",
     fontSize: 16
+  },
+  pickbonLockedText: {
+    color: "#64748b",
+    fontWeight: 800,
+    fontSize: 13
   },
 };
