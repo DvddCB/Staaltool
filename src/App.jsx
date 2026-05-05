@@ -11,7 +11,6 @@ async function supabaseRequest(path = "", options = {}) {
     ...options,
     headers: {
       apikey: SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
       "Content-Type": "application/json",
       ...(options.headers || {})
     }
@@ -1040,7 +1039,7 @@ export default function App() {
     } catch (err) {
       console.error("Supabase opslaan fout:", err);
       setPdfUploadMessage("");
-      setSearchError("PDF/order is gemaakt, maar opslaan in Supabase lukt niet. Controleer Supabase RLS/policies of zet RLS tijdelijk uit voor de orders tabel.");
+      setSearchError("PDF/order is gemaakt, maar opslaan in Supabase lukt niet. Controleer API key, tabelkolommen of Supabase rechten.");
       event.target.value = "";
       return;
     }
