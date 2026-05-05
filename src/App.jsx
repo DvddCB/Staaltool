@@ -429,6 +429,8 @@ export default function App() {
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
   const [pickerOrderPage, setPickerOrderPage] = useState(1);
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
+  const [processedOrderIds, setProcessedOrderIds] = useState([]);
+  const [confirmOrderAction, setConfirmOrderAction] = useState(null);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -466,7 +468,11 @@ export default function App() {
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
   const datedPickerOrders = getDemoOrdersWithDates();
-  const allPickerOrdersSorted = datedPickerOrders
+  const effectivePickerOrders = datedPickerOrders.map((order) => ({
+    ...order,
+    status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
+  }));
+  const allPickerOrdersSorted = effectivePickerOrders
     .slice()
     .sort((a, b) => {
       const statusSort = Number(a.status === "Gereed") - Number(b.status === "Gereed");
@@ -484,10 +490,17 @@ export default function App() {
     (safePickerOrderPage - 1) * ordersPerPage,
     safePickerOrderPage * ordersPerPage
   );
-  const visiblePickerOrders = datedPickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
-  const oldestOpenOrderOutsideWeek = datedPickerOrders
+  const visiblePickerOrders = effectivePickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
+  const oldestOpenOrderOutsideWeek = effectivePickerOrders
     .filter((order) => isOrderOpen(order) && !isOrderInWeek(order, pickerWeekStart))
     .sort((a, b) => getOrderDate(a) - getOrderDate(b))[0];
+  const currentSelectedPickerOrder = selectedPickerOrder
+    ? {
+        ...selectedPickerOrder,
+        status: processedOrderIds.includes(selectedPickerOrder.id) ? "Gereed" : selectedPickerOrder.status
+      }
+    : selectedPickerOrder;
+  const allPickbonLinesProcessed = pickbonLines.length > 0 && pickbonLines.every((line) => line.processed);
 
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
@@ -846,6 +859,56 @@ export default function App() {
     setConfirmLineId(null);
   }
 
+  function requestFinishOrder() {
+    if (!selectedPickerOrder?.id) return;
+    setConfirmOrderAction("finish");
+  }
+
+  function requestEditProcessedOrder() {
+    if (!selectedPickerOrder?.id) return;
+    setConfirmOrderAction("edit");
+  }
+
+  function confirmOrderActionNow() {
+    if (!selectedPickerOrder?.id || !confirmOrderAction) return;
+
+    if (confirmOrderAction === "finish") {
+      setProcessedOrderIds((currentIds) =>
+        currentIds.includes(selectedPickerOrder.id)
+          ? currentIds
+          : [...currentIds, selectedPickerOrder.id]
+      );
+
+      setSelectedPickerOrder((currentOrder) =>
+        currentOrder ? { ...currentOrder, status: "Gereed" } : currentOrder
+      );
+    }
+
+    if (confirmOrderAction === "edit") {
+      setProcessedOrderIds((currentIds) =>
+        currentIds.filter((orderId) => orderId !== selectedPickerOrder.id)
+      );
+
+      setSelectedPickerOrder((currentOrder) =>
+        currentOrder ? { ...currentOrder, status: "Open" } : currentOrder
+      );
+
+      setPickbonLines((currentLines) =>
+        currentLines.map((line) => ({
+          ...line,
+          processed: false,
+          scannedQuantity: line.scannedQuantity !== undefined ? 0 : line.scannedQuantity
+        }))
+      );
+    }
+
+    setConfirmOrderAction(null);
+  }
+
+  function cancelOrderAction() {
+    setConfirmOrderAction(null);
+  }
+
   function removePickbonLine(lineId) {
     setPickbonLines((currentLines) => currentLines.filter((line) => line.id !== lineId));
   }
@@ -892,13 +955,32 @@ export default function App() {
   }
 
   function openPickerOrder(order) {
-    setSelectedPickerOrder(order);
+    const effectiveOrder = order
+      ? {
+          ...order,
+          status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
+        }
+      : order;
+
+    setSelectedPickerOrder(effectiveOrder);
     setPickerView("pickbon");
 
-    if (order?.rows?.length) {
-      addOrderRowsToPickbon(order.id, order.rows);
+    if (effectiveOrder?.rows?.length) {
+      addOrderRowsToPickbon(effectiveOrder.id, effectiveOrder.rows);
+
+      if (effectiveOrder.status === "Gereed") {
+        window.setTimeout(() => {
+          setPickbonLines((currentLines) =>
+            currentLines.map((line) => ({
+              ...line,
+              processed: true,
+              scannedQuantity: line.scannedQuantity !== undefined ? line.quantity : line.scannedQuantity
+            }))
+          );
+        }, 0);
+      }
     } else {
-      setPickbonNumber(order?.id || "");
+      setPickbonNumber(effectiveOrder?.id || "");
     }
 
     setLogic4Message("");
@@ -1190,6 +1272,30 @@ export default function App() {
           </div>
         )}
 
+        {confirmOrderAction && (
+          <div style={styles.confirmOverlay}>
+            <div style={styles.confirmModal}>
+              <h2 style={styles.confirmTitle}>
+                {confirmOrderAction === "finish" ? "Order verwerken" : "Order aanpassen"}
+              </h2>
+              <p style={styles.confirmText}>
+                {confirmOrderAction === "finish"
+                  ? "Weet u zeker dat deze order volledig verwerkt is?"
+                  : "Weet u zeker dat u deze verwerkte order wilt aanpassen?"}
+              </p>
+
+              <div style={styles.confirmActions}>
+                <button style={styles.confirmNoButton} onClick={cancelOrderAction}>
+                  Nee
+                </button>
+                <button style={styles.confirmYesButton} onClick={confirmOrderActionNow}>
+                  Ja
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
           <section style={styles.pickerHomePage} className="picker-home-responsive">
             <section style={styles.panel}>
@@ -1387,14 +1493,14 @@ export default function App() {
                 <p style={styles.selectedOrderLabel}>Geselecteerde order</p>
                 <div style={styles.selectedOrderContent} className="selected-order-responsive">
                   <div>
-                    <h2 style={styles.selectedOrderTitle}>{selectedPickerOrder?.id}</h2>
-                    <p style={styles.selectedOrderCustomer}>{selectedPickerOrder?.klant}</p>
+                    <h2 style={styles.selectedOrderTitle}>{currentSelectedPickerOrder?.id}</h2>
+                    <p style={styles.selectedOrderCustomer}>{currentSelectedPickerOrder?.klant}</p>
                     <p style={styles.selectedOrderMeta}>
-                      Datum: {selectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(selectedPickerOrder)) : ""} · Tijd: {selectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(selectedPickerOrder).done} · Open: {getOrderProgress(selectedPickerOrder).open} · Status: {selectedPickerOrder?.status}
+                      Datum: {currentSelectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(currentSelectedPickerOrder)) : ""} · Tijd: {currentSelectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(currentSelectedPickerOrder).done} · Open: {getOrderProgress(currentSelectedPickerOrder).open} · Status: {currentSelectedPickerOrder?.status}
                     </p>
                   </div>
 
-                  <button style={styles.openPickbonButton} onClick={() => openPickerOrder(selectedPickerOrder)}>
+                  <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>
                     Pickbon openen
                   </button>
                 </div>
@@ -1433,6 +1539,30 @@ export default function App() {
                     </button>
                   </div>
                 </div>
+
+                {allPickbonLinesProcessed && currentSelectedPickerOrder?.status !== "Gereed" && (
+                  <div style={styles.orderReadyBox}>
+                    <div>
+                      <strong>Alle regels zijn verwerkt.</strong>
+                      <span> Zet de volledige order nu op verwerkt.</span>
+                    </div>
+                    <button style={styles.finishOrderButton} onClick={requestFinishOrder}>
+                      Verwerken
+                    </button>
+                  </div>
+                )}
+
+                {currentSelectedPickerOrder?.status === "Gereed" && (
+                  <div style={styles.orderProcessedBox}>
+                    <div>
+                      <strong>✓ Order verwerkt.</strong>
+                      <span> Deze order staat als verwerkt in planning en overzicht.</span>
+                    </div>
+                    <button style={styles.editProcessedOrderButton} onClick={requestEditProcessedOrder}>
+                      Order aanpassen
+                    </button>
+                  </div>
+                )}
 
                 {pickbonLines.length === 0 ? (
                   <div style={styles.emptyPickbon}>
@@ -2896,6 +3026,52 @@ const styles = {
     background: "#16a34a",
     color: "white",
     padding: "14px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  orderReadyBox: {
+    background: "#dcfce7",
+    border: "1px solid #86efac",
+    color: "#166534",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  orderProcessedBox: {
+    background: "#ecfdf5",
+    border: "1px solid #22c55e",
+    color: "#166534",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  finishOrderButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#16a34a",
+    color: "white",
+    padding: "12px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  editProcessedOrderButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#0f172a",
+    color: "white",
+    padding: "12px 16px",
     fontWeight: 900,
     cursor: "pointer",
     fontSize: 16
