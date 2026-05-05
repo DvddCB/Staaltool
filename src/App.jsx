@@ -720,12 +720,13 @@ export default function App() {
   const canRemoveOrders = isAdmin;
 
   const effectivePickerOrders = useMemo(() => {
-    const adminDemoOrders = getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id));
+    // Alleen 1 vaste testorder + echte beheerderorders tonen.
+    // De overige demo/testorders zijn uitgeschakeld.
+    const oneTestOrder = getDemoOrdersWithDates()
+      .filter((order) => !hiddenDemoOrderIds.includes(order.id))
+      .slice(0, 1);
 
-    // Beide accounts zien dezelfde orderlijst en planning.
-    // De beheerder bepaalt de lijst door orders te uploaden, in te plannen of te verwijderen.
-    // Gebruiker1 mag dezelfde lijst verwerken, maar niet uploaden, datums wijzigen of orders verwijderen.
-    const datedPickerOrders = [...adminDemoOrders, ...uploadedPdfOrders];
+    const datedPickerOrders = [...oneTestOrder, ...uploadedPdfOrders];
 
     return datedPickerOrders.map((order) => ({
       ...order,
@@ -1475,7 +1476,7 @@ export default function App() {
   if (!selectedModule) {
     return (
       <div style={styles.menuPage}>
-        <div style={styles.menuCard}>
+        <div style={styles.menuCard} className="menuCard">
           <img
             src="/logo.png"
             alt="logo"
@@ -1488,13 +1489,13 @@ export default function App() {
           <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
 
           <div style={styles.menuGrid}>
-            <button style={styles.moduleButton} onClick={() => chooseModule("Artikelzoeker")}>
-              <span style={styles.moduleTitle}>Artikel Picker</span>
+            <button style={styles.moduleButton} className="moduleButton" onClick={() => chooseModule("Artikelzoeker")}>
+              <span style={styles.moduleTitle} className="moduleTitle">Artikel Picker</span>
               <span style={styles.moduleText}>Pickbonnen scannen en verwerken</span>
             </button>
 
-            <button style={styles.moduleButton} onClick={() => chooseModule("Artikel PICKER")}>
-              <span style={styles.moduleTitle}>Artikel Zoeker</span>
+            <button style={styles.moduleButton} className="moduleButton" onClick={() => chooseModule("Artikel PICKER")}>
+              <span style={styles.moduleTitle} className="moduleTitle">Artikel Zoeker</span>
               <span style={styles.moduleText}>Artikelen zoeken en direct de juiste code vinden</span>
             </button>
           </div>
@@ -1545,6 +1546,114 @@ export default function App() {
             grid-template-columns: 1fr 1fr !important;
           }
           .pickbon-controls-responsive input { width: 100% !important; }
+
+          .mobile-hide-on-phone {
+            display: none !important;
+          }
+
+          .menuCard {
+            padding: 18px !important;
+            border-radius: 18px !important;
+          }
+
+          .moduleButton {
+            min-height: 112px !important;
+          }
+
+          .moduleTitle {
+            font-size: 23px !important;
+          }
+
+          .panel {
+            padding: 12px !important;
+            border-radius: 16px !important;
+          }
+
+          .pickerPanelHeaderMobile {
+            flex-direction: column !important;
+            align-items: stretch !important;
+          }
+
+          .orderSearchInputMobile {
+            max-width: none !important;
+            width: 100% !important;
+          }
+
+          .pdfUploadPanelMobile {
+            grid-template-columns: 1fr !important;
+            padding: 12px !important;
+          }
+
+          .pdfUploadButtonMobile {
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          .orderCardTopMobile {
+            flex-direction: column !important;
+            gap: 8px !important;
+          }
+
+          .orderMetaMobile {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            gap: 5px !important;
+          }
+
+          .selectedOrderTitleMobile {
+            font-size: 27px !important;
+            word-break: break-word !important;
+          }
+
+          .calendarOrderMobile strong {
+            display: block !important;
+            font-size: 15px !important;
+            word-break: break-word !important;
+          }
+
+          .calendarOrderMobile span {
+            font-size: 13px !important;
+          }
+
+          .confirmModalMobile {
+            max-width: none !important;
+            margin: 0 8px !important;
+            padding: 18px !important;
+          }
+
+          .confirmActionsMobile {
+            grid-template-columns: 1fr !important;
+          }
+
+          .manualSearchPanelMobile {
+            grid-template-columns: 1fr !important;
+          }
+
+          .stepsMobile {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .gridMobile {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .cardButtonMobile {
+            min-height: 92px !important;
+            padding: 10px !important;
+          }
+
+          .cardTitleMobile {
+            font-size: 17px !important;
+          }
+
+          .pickbonDateEditMobile {
+            grid-template-columns: 1fr !important;
+            max-width: none !important;
+          }
+
+          .requestedQtyBoxMobile {
+            min-width: 0 !important;
+          }
         }
       `}</style>
 
@@ -1584,10 +1693,10 @@ export default function App() {
 
         {confirmLineId && (
           <div style={styles.confirmOverlay}>
-            <div style={styles.confirmModal}>
+            <div style={styles.confirmModal} className="confirmModalMobile">
               <h2 style={styles.confirmTitle}>Controle artikel</h2>
               <p style={styles.confirmText}>Weet u zeker dat u het juiste artikel heeft?</p>
-              <div style={styles.confirmActions}>
+              <div style={styles.confirmActions} className="confirmActionsMobile">
                 <button style={styles.confirmNoButton} onClick={cancelProcessLine}>Nee</button>
                 <button style={styles.confirmYesButton} onClick={confirmProcessLine}>Ja</button>
               </div>
@@ -1597,14 +1706,14 @@ export default function App() {
 
         {confirmOrderAction && (
           <div style={styles.confirmOverlay}>
-            <div style={styles.confirmModal}>
+            <div style={styles.confirmModal} className="confirmModalMobile">
               <h2 style={styles.confirmTitle}>{confirmOrderAction === "finish" ? "Order verwerken" : "Order aanpassen"}</h2>
               <p style={styles.confirmText}>
                 {confirmOrderAction === "finish"
                   ? "Weet u zeker dat deze order volledig verwerkt is?"
                   : "Weet u zeker dat u deze verwerkte order wilt aanpassen?"}
               </p>
-              <div style={styles.confirmActions}>
+              <div style={styles.confirmActions} className="confirmActionsMobile">
                 <button style={styles.confirmNoButton} onClick={cancelOrderAction}>Nee</button>
                 <button style={styles.confirmYesButton} onClick={confirmOrderActionNow}>Ja</button>
               </div>
@@ -1614,10 +1723,10 @@ export default function App() {
 
         {confirmRemoveOrderId && (
           <div style={styles.confirmOverlay}>
-            <div style={styles.confirmModal}>
+            <div style={styles.confirmModal} className="confirmModalMobile">
               <h2 style={styles.confirmTitle}>Order uit lijst halen</h2>
               <p style={styles.confirmText}>Weet u zeker dat u deze order uit het overzicht wilt halen?</p>
-              <div style={styles.confirmActions}>
+              <div style={styles.confirmActions} className="confirmActionsMobile">
                 <button style={styles.confirmNoButton} onClick={cancelRemoveOrder}>Nee</button>
                 <button style={styles.confirmYesButton} onClick={confirmRemoveOrder}>Ja</button>
               </div>
@@ -1627,15 +1736,15 @@ export default function App() {
 
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
           <section style={styles.pickerHomePage} className="picker-home-responsive">
-            <section style={styles.panel}>
-              <div style={styles.pickerPanelHeader}>
+            <section style={styles.panel} className="panel">
+              <div style={styles.pickerPanelHeader} className="pickerPanelHeaderMobile">
                 <div>
                   <p style={styles.label}>Artikel Picker</p>
                   <h2 style={styles.sectionTitle}>Orders verwerken</h2>
                 </div>
 
                 <input
-                  style={styles.orderSearchInput}
+                  style={styles.orderSearchInput} className="orderSearchInputMobile"
                   value={pickerOrderQuery}
                   onChange={(e) => {
                     setPickerOrderQuery(e.target.value);
@@ -1645,14 +1754,14 @@ export default function App() {
                 />
               </div>
 
-              {canUploadPdf && <div style={styles.pdfUploadPanel}>
+              {canUploadPdf && <div style={styles.pdfUploadPanel} className="pdfUploadPanelMobile">
                 <div>
                   <p style={styles.label}>PDF pickbon</p>
                   <h3 style={styles.pdfUploadTitle}>Pickbon uploaden</h3>
                   <p style={styles.pdfUploadText}>Upload een Logic4 pickbon-PDF. De app leest tekst of gebruikt OCR en zet de order direct in de lijst.</p>
                 </div>
 
-                <label style={styles.pdfUploadButton}>
+                <label style={styles.pdfUploadButton} className="pdfUploadButtonMobile">
                   PDF kiezen
                   <input type="file" accept="application/pdf" style={{ display: "none" }} onChange={handlePdfUpload} />
                 </label>
@@ -1681,7 +1790,7 @@ export default function App() {
                 <div style={styles.orderList}>
                   {pagedPickerOrders.length === 0 && (
                     <div style={styles.emptyPickbon}>
-                      Geen orders zichtbaar. De beheerder moet eerst orders uploaden en inplannen.
+                      Geen orders zichtbaar. Upload eerst orders via het beheerderaccount.
                     </div>
                   )}
 
@@ -1700,7 +1809,7 @@ export default function App() {
                       onClick={() => setSelectedPickerOrder(order)}
                       onDoubleClick={() => openPickerOrder(order)}
                     >
-                      <div style={styles.orderCardTop}>
+                      <div style={styles.orderCardTop} className="orderCardTopMobile">
                         <div>
                           <p style={styles.orderNumber}>{order.id}</p>
                           <p style={styles.orderCustomer}>{order.klant}</p>
@@ -1710,7 +1819,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div style={styles.orderMeta}>
+                      <div style={styles.orderMeta} className="orderMetaMobile">
                         <span>{formatDutchDate(getOrderDate(order))}</span>
                         <span>{order.tijd}</span>
                         <span style={styles.orderProgressText}>
@@ -1758,8 +1867,8 @@ export default function App() {
             </section>
 
             <section style={styles.agendaPanel}>
-              <section style={styles.panel} className="mobile-agenda-panel">
-                <div style={styles.pickerPanelHeader}>
+              <section style={styles.panel} className="panel" className="mobile-agenda-panel">
+                <div style={styles.pickerPanelHeader} className="pickerPanelHeaderMobile">
                   <div>
                     <p style={styles.label}>Planning</p>
                     <h2 style={styles.sectionTitle}>Visuele agenda</h2>
@@ -1830,7 +1939,7 @@ export default function App() {
                 <p style={styles.selectedOrderLabel}>Geselecteerde order</p>
                 <div style={styles.selectedOrderContent} className="selected-order-responsive">
                   <div>
-                    <h2 style={styles.selectedOrderTitle}>{currentSelectedPickerOrder?.id}</h2>
+                    <h2 style={styles.selectedOrderTitle} className="selectedOrderTitleMobile">{currentSelectedPickerOrder?.id}</h2>
                     <p style={styles.selectedOrderCustomer}>{currentSelectedPickerOrder?.klant}</p>
                     <p style={styles.selectedOrderMeta}>
                       Datum: {currentSelectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(currentSelectedPickerOrder)) : ""} · Tijd: {currentSelectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(currentSelectedPickerOrder).done} · Open: {getOrderProgress(currentSelectedPickerOrder).open} · Status: {currentSelectedPickerOrder?.status}
@@ -1888,7 +1997,7 @@ export default function App() {
                 )}
 
                 {canEditDates && currentSelectedPickerOrder?.source === "PDF" && (
-                  <div style={styles.pickbonDateEdit}>
+                  <div style={styles.pickbonDateEdit} className="pickbonDateEditMobile">
                     <label style={styles.pdfDateLabel}>Plandatum</label>
                     <input
                       style={styles.pdfDateInput}
@@ -1920,7 +2029,7 @@ export default function App() {
                         </div>
 
                         <div style={styles.pickbonLineControls} className="pickbon-controls-responsive">
-                          <div style={styles.requestedQtyBox}>
+                          <div style={styles.requestedQtyBox} className="requestedQtyBoxMobile">
                             <span style={styles.qtyLabel}>Aantal</span>
                             <input
                               style={styles.qtyInput}
@@ -1956,7 +2065,7 @@ export default function App() {
           </>
         ) : (
           <>
-            <form style={styles.manualSearchPanel} onSubmit={handleManualSearch}>
+            <form style={styles.manualSearchPanel} className="manualSearchPanelMobile" onSubmit={handleManualSearch}>
               <input
                 style={styles.manualSearchInput}
                 value={manualCode}
@@ -1966,7 +2075,7 @@ export default function App() {
               <button style={styles.smallDarkButton} type="submit">Zoeken</button>
             </form>
 
-            <div style={styles.steps}>
+            <div style={styles.steps} className="stepsMobile">
               <div style={step === "types" ? styles.activeStep : styles.step}>1. Soort</div>
               <div style={step === "sizes" ? styles.activeStep : styles.step}>2. Maat</div>
               <div style={step === "thickness" ? styles.activeStep : styles.step}>3. Dikte</div>
@@ -1977,10 +2086,10 @@ export default function App() {
             {step !== "types" && <button style={styles.backButton} onClick={goBack}>Terug</button>}
 
             {step === "types" && (
-              <section style={styles.grid}>
+              <section style={styles.grid} className="gridMobile">
                 {types.map((item) => (
-                  <button key={item} style={styles.cardButton} onClick={() => chooseType(item)}>
-                    <span style={styles.cardTitle}>{item}</span>
+                  <button key={item} style={styles.cardButton} className="cardButtonMobile" onClick={() => chooseType(item)}>
+                    <span style={styles.cardTitle} className="cardTitleMobile">{item}</span>
                     <span style={styles.cardText}>Bekijk maten</span>
                   </button>
                 ))}
@@ -1989,15 +2098,15 @@ export default function App() {
 
             {step === "sizes" && (
               <section>
-                <div style={styles.panel}>
+                <div style={styles.panel} className="panel">
                   <h2 style={styles.sectionTitle}>{type} maten</h2>
                   <input style={styles.searchInput} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Zoek maat..." />
                 </div>
 
-                <div style={styles.grid}>
+                <div style={styles.grid} className="gridMobile">
                   {filteredSizes.map((item) => (
-                    <button key={item} style={styles.cardButton} onClick={() => chooseSize(item)}>
-                      <span style={styles.cardTitle}>{type} {item}</span>
+                    <button key={item} style={styles.cardButton} className="cardButtonMobile" onClick={() => chooseSize(item)}>
+                      <span style={styles.cardTitle} className="cardTitleMobile">{type} {item}</span>
                       <span style={styles.cardText}>{type === "Koker" ? "Dikte kiezen" : "Lengte invoeren"}</span>
                     </button>
                   ))}
@@ -2007,15 +2116,15 @@ export default function App() {
 
             {step === "thickness" && (
               <section>
-                <div style={styles.panel}>
+                <div style={styles.panel} className="panel">
                   <h2 style={styles.sectionTitle}>Koker {baseSize}</h2>
                   <p style={styles.muted}>Kies de wanddikte.</p>
                 </div>
 
-                <div style={styles.grid}>
+                <div style={styles.grid} className="gridMobile">
                   {kokerData[baseSize].map((thickness) => (
-                    <button key={thickness} style={styles.cardButton} onClick={() => chooseThickness(thickness)}>
-                      <span style={styles.cardTitle}>{baseSize}x{thickness}</span>
+                    <button key={thickness} style={styles.cardButton} className="cardButtonMobile" onClick={() => chooseThickness(thickness)}>
+                      <span style={styles.cardTitle} className="cardTitleMobile">{baseSize}x{thickness}</span>
                       <span style={styles.cardText}>{thickness} mm dikte</span>
                     </button>
                   ))}
@@ -2025,7 +2134,7 @@ export default function App() {
 
             {step === "length" && (
               <section style={styles.twoColumn}>
-                <div style={styles.panel}>
+                <div style={styles.panel} className="panel">
                   <p style={styles.label}>Gekozen profiel</p>
                   <h2 style={styles.bigTitle}>{type} {size}</h2>
                   <label style={styles.inputLabel}>Gewenste lengte in mm</label>
@@ -2038,12 +2147,12 @@ export default function App() {
 
             {step === "colors" && (
               <section>
-                <div style={styles.panel}>
+                <div style={styles.panel} className="panel">
                   <p style={styles.label}>Gekozen profiel en lengte</p>
                   <h2 style={styles.sectionTitle}>{type} {size} - {lengthMm} mm</h2>
                 </div>
 
-                <div style={styles.grid}>
+                <div style={styles.grid} className="gridMobile">
                   {kleurData.map((color) => (
                     <button
                       key={color.code}
@@ -2065,7 +2174,7 @@ export default function App() {
 
             {step === "result" && (
               <section style={styles.twoColumn}>
-                <div style={styles.panel}>
+                <div style={styles.panel} className="panel">
                   <p style={styles.label}>Samenvatting</p>
                   <h2 style={styles.bigTitle}>{type} {size}</h2>
                   <p style={styles.summaryLine}>Lengte: {lengthMm} mm</p>
@@ -2126,6 +2235,7 @@ const styles = {
   },
   loginInput: {
     width: "100%",
+    minHeight: 46,
     boxSizing: "border-box",
     padding: 13,
     marginBottom: 12,
@@ -2225,7 +2335,7 @@ const styles = {
     cursor: "pointer"
   },
   appPage: {
-    minHeight: "100vh",
+    minHeight: "100svh",
     background: "linear-gradient(135deg, #e8f0ff 0%, #f8fafc 55%, #fff3e7 100%)",
     color: "#0f172a",
     fontFamily: "Arial, sans-serif",
@@ -2676,6 +2786,7 @@ const styles = {
     boxSizing: "border-box"
   },
   smallDarkButton: {
+    minHeight: 42,
     border: "none",
     borderRadius: 10,
     background: "#0f172a",
@@ -2735,6 +2846,7 @@ const styles = {
     fontWeight: 800
   },
   smallLightButton: {
+    minHeight: 42,
     border: "none",
     borderRadius: 10,
     background: "#f1f5f9",
@@ -2772,6 +2884,7 @@ const styles = {
   },
   calendarOrder: {
     width: "100%",
+    minHeight: 48,
     border: "none",
     borderRadius: 12,
     color: "white",
@@ -2931,14 +3044,14 @@ const styles = {
     fontWeight: 800
   },
   calendarDay: {
-    minHeight: 250,
+    minHeight: 180,
     background: "#f8fafc",
     border: "1px solid #e2e8f0",
     borderRadius: 16,
     padding: 12
   },
   calendarDayActive: {
-    minHeight: 250,
+    minHeight: 180,
     background: "#eff6ff",
     border: "2px solid #1234aa",
     borderRadius: 16,
