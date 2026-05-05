@@ -1,36 +1,169 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
-import styles from "./styles.js";
-import { profielData, kokerData, kleurData, demoPickerOrders } from "./data.js";
-import {
-  getArticleCode,
-  parseArticleCode,
-  getDemoOrdersWithDates,
-  getOrderDate,
-  getOrderProgress,
-  isOrderInWeek,
-  isOrderOpen,
-  addDays,
-  addWeeks,
-  startOfWeek,
-  formatDutchDate,
-  formatWeekLabel,
-  getWeekDays,
-  isSameDate,
-  toIsoDate,
-  parseLogic4PickbonTextToOrder,
-  readPdfTextWithPdfJs,
-  readPdfTextWithOcr
-} from "./utils.js";
+const profielData = {
+  HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
+  HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
+  IPE: [100, 120, 140, 160, 180, 200, 220, 240, 270, 300, 330, 360, 400],
+  UNP: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 330],
+  Koker: [],
+  "Hoeklijn gelijkzijdig": [
+    "20x20x3", "25x25x3", "30x30x3", "40x40x4", "50x50x5",
+    "60x60x6", "70x70x7", "80x80x8", "100x100x10"
+  ],
+  "Hoeklijn ongelijkzijdig": [
+    "40x20x4", "50x30x5", "60x40x6", "80x40x8", "100x50x10", "120x80x10"
+  ],
+  Stripstaal: [
+    "40x4", "40x5", "40x6", "40x8", "40x10",
+    "50x4", "50x5", "50x6", "50x8", "50x10",
+    "60x5", "60x6", "60x8", "60x10",
+    "80x6", "80x8", "80x10", "80x12",
+    "100x8", "100x10", "100x12", "100x15", "100x20",
+    "120x10", "120x12", "120x15", "120x20",
+    "150x10", "150x12", "150x15", "150x20",
+    "200x10", "200x15", "200x20", "200x25",
+    "250x20", "250x25", "250x30",
+    "300x20", "300x25", "300x30"
+  ]
+};
 
+const kokerData = {
+  "40x40": [3, 4, 5, 6, 8, 10],
+  "50x50": [3, 4, 5, 6, 8, 10],
+  "60x60": [3, 4, 5, 6, 8, 10],
+  "70x70": [3, 4, 5, 6, 8, 10],
+  "80x80": [3, 4, 5, 6, 8, 10],
+  "90x90": [3, 4, 5, 6, 8, 10],
+  "100x100": [3, 4, 5, 6, 8, 10],
+  "110x110": [3, 4, 5, 6, 8, 10],
+  "120x120": [3, 4, 5, 6, 8, 10],
+  "140x140": [3, 4, 5, 6, 8, 10],
+  "150x150": [3, 4, 5, 6, 8, 10],
+  "160x160": [3, 4, 5, 6, 8, 10],
+  "180x180": [3, 4, 5, 6, 8, 10],
+  "200x200": [3, 4, 5, 6, 8, 10]
+};
+
+const kleurData = [
+  { code: "1", naam: "Blauw", kleur: "#2563eb", text: "white" },
+  { code: "2", naam: "Bruin", kleur: "#8b5a2b", text: "white" },
+  { code: "3", naam: "Geel", kleur: "#eab308", text: "#0f172a" },
+  { code: "4", naam: "Gegalvaniseerd", kleur: "#9ca3af", text: "#0f172a" },
+  { code: "5", naam: "Gemenied", kleur: "#7f1d1d", text: "white" },
+  { code: "6", naam: "Grijs", kleur: "#6b7280", text: "white" },
+  { code: "7", naam: "Groen", kleur: "#16a34a", text: "white" },
+  { code: "8", naam: "Lichte corrosie", kleur: "#b45309", text: "white" },
+  { code: "9", naam: "Onbehandeld", kleur: "#d1d5db", text: "#0f172a" },
+  { code: "10", naam: "Oranje", kleur: "#ff7a00", text: "white" },
+  { code: "11", naam: "Rood", kleur: "#dc2626", text: "white" },
+  { code: "12", naam: "Roze", kleur: "#ec4899", text: "white" },
+  { code: "13", naam: "Wit", kleur: "#ffffff", text: "#0f172a", border: "1px solid #cbd5e1" },
+  { code: "14", naam: "Zwart", kleur: "#000000", text: "white" }
+];
+
+const baseMaps = {
+  HEA: {
+    "100": "24010110096", "120": "240102120110", "140": "240103140135",
+    "160": "240104160155", "180": "240105180175", "200": "240106200195",
+    "220": "240107220215", "240": "240108240235", "260": "240109260255",
+    "280": "240110280275", "300": "240111300295", "320": "240112320300",
+    "340": "240113340300"
+  },
+  HEB: {
+    "100": "240202100100", "120": "240203120120", "140": "240204140140",
+    "160": "240205160160", "180": "240206180180", "200": "240207200200",
+    "220": "240208220220", "240": "240209240240", "260": "240210260260",
+    "280": "240211280280", "300": "240212300300", "320": "240213320300",
+    "340": "240214340300"
+  },
+  IPE: {
+    "100": "24040210050", "120": "24040312060", "140": "24040414070",
+    "160": "24040516080", "180": "24040618090", "200": "240407200100",
+    "220": "240408220110", "240": "240409240120", "270": "240410270135",
+    "300": "240411300150", "330": "240412330165", "360": "240413360180",
+    "400": "240414400200"
+  },
+  UNP: {
+    "100": "24050210050", "120": "24050312060", "140": "24050414070",
+    "160": "24050516080", "180": "24050618090", "200": "240507200100",
+    "220": "240508220110", "240": "240509240120", "260": "240510260130",
+    "280": "240511280140", "300": "240512300150", "330": "240513300165"
+  }
+};
+
+function getArticleCode(type, size, lengthMm, colorCode) {
+  const length = Number(lengthMm);
+  if (!type || !size || !length || !colorCode) return "";
+
+  const base = baseMaps[type]?.[String(size)];
+  if (!base) return "";
+
+  return base + String(length) + "9" + String(colorCode);
+}
+
+function findArticleByBase(base) {
+  for (const typeName of Object.keys(baseMaps)) {
+    for (const sizeName of Object.keys(baseMaps[typeName])) {
+      if (baseMaps[typeName][sizeName] === base) {
+        return { type: typeName, size: sizeName };
+      }
+    }
+  }
+  return null;
+}
+
+function parseArticleCode(rawCode) {
+  const cleanCode = String(rawCode || "").replace(/\D/g, "");
+  if (!cleanCode) return null;
+
+  const colorCodes = kleurData.map((c) => c.code).sort((a, b) => b.length - a.length);
+
+  for (const colorCode of colorCodes) {
+    if (!cleanCode.endsWith(colorCode)) continue;
+
+    const withoutColor = cleanCode.slice(0, -colorCode.length);
+    if (!withoutColor.endsWith("9")) continue;
+
+    const withoutSeparator = withoutColor.slice(0, -1);
+
+    for (let lengthDigits = 5; lengthDigits >= 4; lengthDigits--) {
+      if (withoutSeparator.length <= lengthDigits) continue;
+
+      const lengthText = withoutSeparator.slice(-lengthDigits);
+      const length = Number(lengthText);
+      const base = withoutSeparator.slice(0, -lengthDigits);
+
+      if (length < 1000 || length > 20000 || length % 50 !== 0) continue;
+
+      const found = findArticleByBase(base);
+      if (!found) continue;
+
+      const color = kleurData.find((c) => c.code === colorCode);
+
+      return {
+        type: found.type,
+        size: found.size,
+        length,
+        colorCode,
+        colorName: color?.naam || "",
+        code: cleanCode
+      };
+    }
+  }
+
+  return null;
+}
 
 function BarcodeView({ value }) {
   const svgRef = useRef(null);
+
   useEffect(() => {
     if (!value || !svgRef.current) return;
+
     try {
       svgRef.current.innerHTML = "";
+
       JsBarcode(svgRef.current, String(value), {
         format: "CODE128",
         width: 2,
@@ -46,42 +179,259 @@ function BarcodeView({ value }) {
       console.error("Barcode kon niet worden gemaakt:", err);
     }
   }, [value]);
+
   if (!value) return null;
+
   return (
     <div style={styles.barcodeOuter}>
       <svg ref={svgRef} style={styles.barcodeSvg}></svg>
     </div>
   );
 }
+
+
 function getModuleDisplayName(moduleName) {
   if (moduleName === "Artikelzoeker") return "Artikel Picker";
   if (moduleName === "Artikel PICKER") return "Artikel Zoeker";
   return moduleName;
 }
 
+const demoPickerOrders = [
+  {
+    id: "ORD-10482",
+    klant: "Bouwbedrijf De Vries",
+    tijd: "08:30",
+    status: "Open",
+    regels: 6,
+    kleur: "#f97316",
+    rows: [
+      {
+        articleCode: "24010110096300092",
+        description: "HEA 100 - 3000 mm - 2. Bruin",
+        type: "HEA",
+        size: "100",
+        length: 3000,
+        colorCode: "2",
+        colorName: "Bruin",
+        quantity: 2
+      },
+      {
+        articleCode: "240402100504000914",
+        description: "IPE 100 - 4000 mm - 14. Zwart",
+        type: "IPE",
+        size: "100",
+        length: 4000,
+        colorCode: "14",
+        colorName: "Zwart",
+        quantity: 1
+      }
+    ]
+  },
+  {
+    id: "ORD-10483",
+    klant: "Jansen Constructie",
+    tijd: "10:00",
+    status: "Bezig",
+    regels: 12,
+    kleur: "#2563eb",
+    rows: [
+      {
+        articleCode: "2402021001003500911",
+        description: "HEB 100 - 3500 mm - 11. Rood",
+        type: "HEB",
+        size: "100",
+        length: 3500,
+        colorCode: "11",
+        colorName: "Rood",
+        quantity: 1
+      },
+      {
+        articleCode: "24050210050450091",
+        description: "UNP 100 - 4500 mm - 1. Blauw",
+        type: "UNP",
+        size: "100",
+        length: 4500,
+        colorCode: "1",
+        colorName: "Blauw",
+        quantity: 2
+      }
+    ]
+  },
+  {
+    id: "ORD-10484",
+    klant: "Circulair Project Noord",
+    tijd: "12:45",
+    status: "Open",
+    regels: 4,
+    kleur: "#16a34a",
+    rows: [
+      {
+        articleCode: "240103140135300097",
+        description: "HEA 140 - 3000 mm - 7. Groen",
+        type: "HEA",
+        size: "140",
+        length: 3000,
+        colorCode: "7",
+        colorName: "Groen",
+        quantity: 1
+      }
+    ]
+  },
+  {
+    id: "ORD-10485",
+    klant: "Van Dijk Montage",
+    tijd: "15:15",
+    status: "Gereed",
+    regels: 9,
+    kleur: "#64748b",
+    rows: [
+      {
+        articleCode: "2404113001506000914",
+        description: "IPE 300 - 6000 mm - 14. Zwart",
+        type: "IPE",
+        size: "300",
+        length: 6000,
+        colorCode: "14",
+        colorName: "Zwart",
+        quantity: 1
+      }
+    ]
+  }
+];
+
+const demoPickerDays = [
+  { dag: "Ma", datum: "6", orders: 2 },
+  { dag: "Di", datum: "7", orders: 4 },
+  { dag: "Wo", datum: "8", orders: 1 },
+  { dag: "Do", datum: "9", orders: 3 },
+  { dag: "Vr", datum: "10", orders: 5 }
+];
+
+function startOfWeek(date) {
+  const nextDate = new Date(date);
+  const day = nextDate.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  nextDate.setDate(nextDate.getDate() + diff);
+  nextDate.setHours(0, 0, 0, 0);
+  return nextDate;
+}
+
+function addDays(date, amount) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+}
+
+function addWeeks(date, amount) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount * 7);
+  return startOfWeek(nextDate);
+}
+
+function formatDutchDate(date) {
+  return date.toLocaleDateString("nl-NL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short"
+  });
+}
+
+function formatWeekLabel(weekStart) {
+  const weekEnd = addDays(weekStart, 4);
+  return `${weekStart.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} - ${weekEnd.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
+}
+
+function getWeekDays(weekStart) {
+  return [0, 1, 2, 3, 4].map((offset) => {
+    const date = addDays(weekStart, offset);
+
+    return {
+      date,
+      dag: date.toLocaleDateString("nl-NL", { weekday: "short" }),
+      datum: String(date.getDate()),
+      label: formatDutchDate(date)
+    };
+  });
+}
+
+function isSameDate(a, b) {
+  return a.toDateString() === b.toDateString();
+}
+
+function toIsoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getDemoOrdersWithDates() {
+  const today = new Date();
+  const thisWeek = startOfWeek(today);
+  const previousWeek = addWeeks(thisWeek, -1);
+  const nextWeek = addWeeks(thisWeek, 1);
+
+  return demoPickerOrders.map((order, index) => {
+    const plannedDates = [
+      addDays(previousWeek, 2),
+      addDays(thisWeek, 1),
+      addDays(thisWeek, 3),
+      addDays(nextWeek, 1)
+    ];
+
+    return {
+      ...order,
+      plannedDate: toIsoDate(plannedDates[index] || today)
+    };
+  });
+}
+
+function getOrderDate(order) {
+  const date = new Date(order.plannedDate + "T00:00:00");
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function isOrderInWeek(order, weekStart) {
+  const orderDate = getOrderDate(order);
+  const weekEnd = addDays(weekStart, 5);
+  return orderDate >= weekStart && orderDate < weekEnd;
+}
+
+function isOrderOpen(order) {
+  return order.status !== "Gereed";
+}
 
 
+function getOrderProgress(order) {
+  const rows = order?.rows || [];
+  const total = rows.length || Number(order?.regels || 0) || 0;
 
+  if (order?.status === "Gereed") {
+    return { done: total, open: 0, total };
+  }
 
+  const done = rows.filter((row) => row.processed || row.scannedQuantity >= row.quantity).length;
 
-
-
-
-
-
+  return {
+    done,
+    open: Math.max(0, total - done),
+    total
+  };
+}
 
 
 async function loadPdfJsFromCdn() {
   if (window.pdfjsLib) {
     return window.pdfjsLib;
   }
+
   await new Promise((resolve, reject) => {
     const existingScript = document.querySelector("script[data-pdfjs-cdn='true']");
+
     if (existingScript) {
       existingScript.addEventListener("load", resolve, { once: true });
       existingScript.addEventListener("error", reject, { once: true });
       return;
     }
+
     const script = document.createElement("script");
     script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
     script.async = true;
@@ -90,24 +440,32 @@ async function loadPdfJsFromCdn() {
     script.onerror = reject;
     document.body.appendChild(script);
   });
+
   if (!window.pdfjsLib) {
     throw new Error("PDF.js kon niet worden geladen.");
   }
+
   window.pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
   return window.pdfjsLib;
 }
+
+
 async function loadTesseractFromCdn() {
   if (window.Tesseract) {
     return window.Tesseract;
   }
+
   await new Promise((resolve, reject) => {
     const existingScript = document.querySelector("script[data-tesseract-cdn='true']");
+
     if (existingScript) {
       existingScript.addEventListener("load", resolve, { once: true });
       existingScript.addEventListener("error", reject, { once: true });
       return;
     }
+
     const script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
     script.async = true;
@@ -116,11 +474,15 @@ async function loadTesseractFromCdn() {
     script.onerror = reject;
     document.body.appendChild(script);
   });
+
   if (!window.Tesseract) {
     throw new Error("OCR kon niet worden geladen.");
   }
+
   return window.Tesseract;
 }
+
+
 function normalizeOcrText(text) {
   return String(text || "")
     .replace(/[|]/g, " ")
@@ -129,48 +491,63 @@ function normalizeOcrText(text) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
 function parseDutchPdfDate(text) {
   const dateMatch =
     String(text || "").match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/) ||
     String(text || "").match(/\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b/);
+
   if (!dateMatch) return toIsoDate(new Date());
+
   if (dateMatch[1].length === 4) {
     const year = dateMatch[1];
     const month = String(dateMatch[2]).padStart(2, "0");
     const day = String(dateMatch[3]).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
+
   const day = String(dateMatch[1]).padStart(2, "0");
   const month = String(dateMatch[2]).padStart(2, "0");
   const year = dateMatch[3];
+
   return `${year}-${month}-${day}`;
 }
+
+
+
+
 function extractLogic4CustomerName(rawText, cleanText) {
   const lines = String(rawText || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+
   // 1. Beste geval: "Voor:" staat op aparte regel.
   // Neem exact de eerste regel eronder.
   for (let index = 0; index < lines.length; index++) {
     const line = lines[index];
+
     if (/^Voor\s*:?\s*$/i.test(line)) {
       return cleanLogic4CustomerLine(lines[index + 1] || "");
     }
+
     const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
     if (sameLineMatch?.[1]?.trim()) {
       return cleanLogic4CustomerLine(sameLineMatch[1]);
     }
   }
+
   // 2. OCR fallback: "Voor:" staat soms in één lange regel.
   // Dan pakken we alleen het eerste blok direct na Voor:
   const fallbackMatch = String(cleanText || "").match(/Voor\s*:\s*(.+)$/i);
   return cleanLogic4CustomerLine(fallbackMatch?.[1] || "");
 }
+
 function cleanLogic4CustomerLine(value) {
   let text = String(value || "")
     .replace(/\s+/g, " ")
     .trim();
+
   // Stop bij bekende velden.
   text = text
     .replace(/\bKlantnummer\b.*$/i, "")
@@ -182,61 +559,215 @@ function cleanLogic4CustomerLine(value) {
     .replace(/\bArt\.?nr\b.*$/i, "")
     .replace(/\bOmschrijving\b.*$/i, "")
     .trim();
+
   // Stop bij postcode of telefoon.
   text = text
     .replace(/\b\d{4}\s?[A-Z]{2}\b.*$/i, "")
     .replace(/\b\d{2}[-\s]?\d{8}\b.*$/i, "")
     .trim();
+
   // Speciaal voor OCR waarbij adres achter klant op dezelfde regel komt:
   // "Balie eentweedrie 1 1234ab..." => "Balie"
   const beforeAddress = text.match(/^(.+?)\s+[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ0-9.'-]*\s+\d+\b/);
   if (beforeAddress?.[1]) {
     text = beforeAddress[1].trim();
   }
+
   // Als OCR nog steeds alles aan elkaar zet, neem alleen het eerste woord/blok.
   // Voor jullie voorbeeld wordt dit "Balie".
   if (text.includes(" ")) {
     const firstWord = text.split(" ")[0].trim();
     if (firstWord) return firstWord;
   }
+
   return text;
 }
+
+function parseLogic4PickbonTextToOrder(text, fileName) {
+  const rawText = String(text || "");
+  const cleanText = normalizeOcrText(rawText);
+
+  const lines = rawText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  const joinedLines = lines.join(" ");
+
+  const pickbonMatch =
+    cleanText.match(/Pickbon\s+(\d{3,})/i) ||
+    cleanText.match(/\bPickbon\b[^0-9]{0,20}(\d{3,})/i);
+
+  const orderMatch =
+    cleanText.match(/Ordernummer[:\s]+(\d{3,})/i) ||
+    cleanText.match(/\b(30\d{5,})\b/) ||
+    fileName.match(/(\d{5,})/);
+
+  const customerName = extractLogic4CustomerName(rawText, cleanText);
+  const klantnummerMatch = cleanText.match(/Klantnummer[:\s]+(\d{2,})/i);
+
+  const orderDate =
+    cleanText.match(/Orderdatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1] ||
+    cleanText.match(/Verzenddatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1];
+
+  const articleRows = [];
+  const seenCodes = new Set();
+
+  function addArticleRow(rawCode, quantity, sourceText = "") {
+    const code = String(rawCode || "").replace(/\D/g, "");
+    if (!code || seenCodes.has(code)) return false;
+
+    const parsed = parseArticleCode(code);
+    if (!parsed) return false;
+
+    seenCodes.add(code);
+
+    const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || code;
+
+    articleRows.push({
+      articleCode,
+      description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
+      type: parsed.type,
+      size: parsed.size,
+      length: parsed.length,
+      colorCode: parsed.colorCode,
+      colorName: parsed.colorName,
+      quantity: Math.max(1, Number(quantity || 1)),
+      pdfSourceText: sourceText
+    });
+
+    return true;
+  }
+
+  // 1. Beste herkenning voor jullie Logic4 layout:
+  // Art.nr staat soms als 14 cijfers op regel 1 en laatste 3 cijfers op regel 2.
+  // Omschrijving en aantallen staan in de regels erna.
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const nextLine = lines[index + 1] || "";
+    const next2Line = lines[index + 2] || "";
+    const next3Line = lines[index + 3] || "";
+    const windowText = [line, nextLine, next2Line, next3Line].join(" ").replace(/\s+/g, " ");
+
+    const baseMatch = line.match(/\b(\d{12,16})\b/);
+    const suffixMatch = nextLine.match(/^\s*(\d{1,6})\s*$/);
+
+    if (baseMatch && suffixMatch) {
+      const combinedCode = `${baseMatch[1]}${suffixMatch[1]}`;
+      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
+      const smallNumbers = qtyNumbers
+        .map((value) => Number(value))
+        .filter((value) => value > 0 && value <= 99);
+
+      // Laatste kleine getal is meestal "Nu te picken".
+      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+      addArticleRow(combinedCode, quantity, windowText);
+    }
+  }
+
+  // 2. Fallback: zoek alle volledige codes in samengevoegde tekst.
+  const compactText = joinedLines.replace(/\s+/g, " ");
+  const fullCodes = compactText.match(/\b\d{15,24}\b/g) || [];
+
+  fullCodes.forEach((code) => {
+    if (seenCodes.has(code)) return;
+
+    const codeIndex = compactText.indexOf(code);
+    const sourceWindow = compactText.slice(codeIndex, codeIndex + 180);
+    const numbersAfterCode = sourceWindow
+      .slice(code.length)
+      .match(/\b\d+\b/g) || [];
+
+    const smallNumbers = numbersAfterCode
+      .map((value) => Number(value))
+      .filter((value) => value > 0 && value <= 99);
+
+    const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+    addArticleRow(code, quantity, sourceWindow);
+  });
+
+  // 3. Laatste fallback speciaal voor deze pickbon:
+  // OCR kan de code splitsen of spaties zetten. Zoek "240..." + losse cijfers erachter in de buurt.
+  for (let index = 0; index < lines.length; index++) {
+    const windowText = lines.slice(index, index + 4).join(" ").replace(/\s+/g, " ");
+    const looseMatch = windowText.match(/\b(24\d{10,14})\D+(\d{1,6})\b/);
+
+    if (looseMatch) {
+      const combinedCode = `${looseMatch[1]}${looseMatch[2]}`;
+      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
+      const smallNumbers = qtyNumbers
+        .map((value) => Number(value))
+        .filter((value) => value > 0 && value <= 99);
+
+      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+      addArticleRow(combinedCode, quantity, windowText);
+    }
+  }
+
+  const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
+  const orderId = orderMatch?.[1] || fallbackId;
+  const klant = customerName || (klantnummerMatch?.[1] ? `Klantnummer ${klantnummerMatch[1]}` : "Logic4 PDF pickbon");
+
+  return {
+    id: orderId,
+    pickbonNumber: pickbonMatch?.[1] || "",
+    klant,
+    tijd: "PDF",
+    status: "Open",
+    regels: articleRows.length,
+    kleur: "#eab308",
+    plannedDate: orderDate ? parseDutchPdfDate(orderDate) : parseDutchPdfDate(cleanText),
+    rows: articleRows,
+    source: "PDF",
+    rawPdfText: rawText
+  };
+}
+
 
 async function readPdfTextWithPdfJs(file) {
   const pdfjsLib = await loadPdfJsFromCdn();
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   const pageTexts = [];
+
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
     const content = await page.getTextContent();
     const pageText = content.items.map((item) => item.str).join("\n");
     pageTexts.push(pageText);
   }
+
   return {
     pdf,
     text: pageTexts.join("\n")
   };
 }
+
 async function readPdfTextWithOcr(pdf) {
   const Tesseract = await loadTesseractFromCdn();
   const pageTexts = [];
+
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
     const viewport = page.getViewport({ scale: 3 });
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
+
     canvas.width = viewport.width;
     canvas.height = viewport.height;
+
     await page.render({
       canvasContext: context,
       viewport
     }).promise;
+
     const result = await Tesseract.recognize(canvas, "nld+eng");
     pageTexts.push(result?.data?.text || "");
   }
+
   return pageTexts.join("\n");
 }
+
 
 export default function App() {
   const controlsRef = useRef(null);
@@ -428,46 +959,6 @@ export default function App() {
   }
 
 
-  function handleBrowserBack() {
-    if (selectedModule === "Artikelzoeker" && pickerView === "pickbon") {
-      setPickerView("home");
-      setScanResult("");
-      setScanError("");
-      setSearchError("");
-      window.history.pushState({ staaltool: "picker-home" }, "");
-      return;
-    }
-
-    if (selectedModule) {
-      setSelectedModule("");
-      setPickerView("home");
-      clearTool("types");
-      window.history.pushState({ staaltool: "menu" }, "");
-      return;
-    }
-
-    if (loggedIn) {
-      window.history.pushState({ staaltool: "menu" }, "");
-    }
-  }
-
-  useEffect(() => {
-    if (!loggedIn) return;
-
-    window.history.replaceState({ staaltool: "menu" }, "");
-    window.history.pushState({ staaltool: "current" }, "");
-
-    const onPopState = () => {
-      handleBrowserBack();
-    };
-
-    window.addEventListener("popstate", onPopState);
-
-    return () => {
-      window.removeEventListener("popstate", onPopState);
-    };
-  }, [loggedIn, selectedModule, pickerView]);
-
   function handleLogin(event) {
     event.preventDefault();
 
@@ -531,20 +1022,7 @@ export default function App() {
     clearTool("types");
   }
 
-  function goToPickerHome() {
-    window.history.pushState({ staaltool: "picker-home" }, "");
-    stopScanner();
-    setLoggedIn(true);
-    setSelectedModule("Artikelzoeker");
-    setPickerView("home");
-    setStep("search");
-    setScanResult("");
-    setScanError("");
-    setSearchError("");
-  }
-
   function chooseModule(moduleName) {
-    window.history.pushState({ staaltool: moduleName }, "");
     setSelectedModule(moduleName);
 
     if (moduleName === "Artikelzoeker") {
@@ -1019,7 +1497,6 @@ export default function App() {
         }
       : order;
 
-    window.history.pushState({ staaltool: "pickbon", orderId: effectiveOrder?.id || "" }, "");
     setSelectedPickerOrder(effectiveOrder);
     setPickerView("pickbon");
 
@@ -1144,13 +1621,7 @@ export default function App() {
     return (
       <div style={styles.menuPage}>
         <div style={styles.menuCard}>
-          <img
-            src="/logo.png"
-            alt="logo"
-            style={{ ...styles.menuLogo, cursor: "pointer" }}
-            onClick={() => chooseModule("Artikelzoeker")}
-            title="Naar Artikel Picker"
-          />
+          <img src="/logo.png" alt="logo" style={styles.menuLogo} />
 
           <h1 style={styles.menuTitle}>Kies functie</h1>
           <p style={styles.menuSubtitle}>Selecteer waarmee je wilt werken.</p>
@@ -1280,13 +1751,7 @@ export default function App() {
       <div style={styles.appShell}>
         <header style={styles.header} className="app-header-responsive">
           <div style={styles.brandRow} className="app-brand-responsive">
-            <img
-              src="/logo.png"
-              alt="logo"
-              style={{ ...styles.headerLogo, cursor: "pointer" }}
-              onClick={goToPickerHome}
-              title="Naar Artikel Picker"
-            />
+            <img src="/logo.png" alt="logo" style={styles.headerLogo} />
             <div>
               <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
               <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
@@ -1970,3 +2435,1352 @@ export default function App() {
     </div>
   );
 }
+
+const styles = {
+  loginPage: {
+    minHeight: "100svh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
+    fontFamily: "Arial, sans-serif",
+    padding: 16,
+    boxSizing: "border-box"
+  },
+  loginCard: {
+    background: "#fff",
+    padding: 32,
+    borderRadius: 16,
+    width: "100%",
+    maxWidth: 340,
+    textAlign: "center",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+    boxSizing: "border-box"
+  },
+  loginLogo: {
+    width: "70%",
+    maxWidth: 180,
+    marginBottom: 20
+  },
+  loginTitle: {
+    marginBottom: 22,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    fontWeight: "700",
+    letterSpacing: 5,
+    fontSize: 32,
+    color: "#ff7a00",
+    textTransform: "uppercase"
+  },
+  loginInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    padding: 13,
+    marginBottom: 12,
+    borderRadius: 8,
+    border: "1px solid #ccc",
+    fontSize: 16
+  },
+  loginButton: {
+    width: "100%",
+    padding: 13,
+    background: "#ff7a00",
+    color: "#fff",
+    border: "none",
+    borderRadius: 8,
+    cursor: "pointer",
+    fontWeight: "700",
+    fontSize: 16
+  },
+  loginError: {
+    color: "red",
+    marginTop: 12
+  },
+  menuPage: {
+    minHeight: "100svh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
+    fontFamily: "Arial, sans-serif",
+    padding: 16,
+    boxSizing: "border-box"
+  },
+  menuCard: {
+    width: "100%",
+    maxWidth: 620,
+    background: "white",
+    borderRadius: 22,
+    padding: 26,
+    textAlign: "center",
+    boxShadow: "0 20px 50px rgba(0,0,0,0.25)",
+    boxSizing: "border-box"
+  },
+  menuLogo: {
+    width: "55%",
+    maxWidth: 190,
+    marginBottom: 12
+  },
+  menuTitle: {
+    margin: 0,
+    color: "#ff7a00",
+    fontSize: 34,
+    letterSpacing: 2,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  menuSubtitle: {
+    color: "#64748b",
+    marginTop: 6,
+    marginBottom: 20
+  },
+  menuGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
+    gap: 14
+  },
+  moduleButton: {
+    minHeight: 135,
+    border: "none",
+    borderRadius: 18,
+    background: "#1234aa",
+    color: "white",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  moduleTitle: {
+    fontSize: 26,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    letterSpacing: 1
+  },
+  moduleText: {
+    marginTop: 8,
+    color: "#dbeafe"
+  },
+  menuLogoutButton: {
+    marginTop: 18,
+    border: "none",
+    borderRadius: 12,
+    background: "#ff7a00",
+    color: "white",
+    padding: "12px 16px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  appPage: {
+    minHeight: "100vh",
+    background: "linear-gradient(135deg, #e8f0ff 0%, #f8fafc 55%, #fff3e7 100%)",
+    color: "#0f172a",
+    fontFamily: "Arial, sans-serif",
+    padding: 12,
+    boxSizing: "border-box"
+  },
+  appShell: {
+    maxWidth: 1180,
+    margin: "0 auto",
+    padding: "6px",
+    boxSizing: "border-box"
+  },
+  header: {
+    display: "flex",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    alignItems: "center",
+    background: "white",
+    borderRadius: 18,
+    padding: 14,
+    gap: 10,
+    boxShadow: "0 10px 30px rgba(15,23,42,0.10)",
+    marginBottom: 14
+  },
+  brandRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    minWidth: 0
+  },
+  headerLogo: {
+    width: 58,
+    height: "auto",
+    flexShrink: 0
+  },
+  headerTitle: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 26,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    letterSpacing: 1
+  },
+  headerSubtitle: {
+    margin: "3px 0 0",
+    color: "#64748b",
+    fontSize: 13
+  },
+  headerActions: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  menuButtonSmall: {
+    border: "none",
+    borderRadius: 12,
+    background: "#0f172a",
+    color: "white",
+    padding: "10px 14px",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
+  scanButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#1234aa",
+    color: "white",
+    padding: "10px 14px",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
+  logoutButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#ff7a00",
+    color: "white",
+    padding: "10px 14px",
+    fontWeight: 700,
+    cursor: "pointer"
+  },
+  scannerPanel: {
+    background: "#0f172a",
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  videoPreview: {
+    width: "100%",
+    maxHeight: 360,
+    borderRadius: 12,
+    background: "black"
+  },
+  stopButton: {
+    marginTop: 10,
+    width: "100%",
+    border: "none",
+    borderRadius: 12,
+    background: "#ff7a00",
+    color: "white",
+    padding: "12px 14px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  scanResult: {
+    background: "#e0f2fe",
+    color: "#0f172a",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    overflowWrap: "anywhere"
+  },
+  scanError: {
+    background: "#fee2e2",
+    color: "#991b1b",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12
+  },
+  steps: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(95px, 1fr))",
+    gap: 6,
+    marginBottom: 12
+  },
+  step: {
+    background: "rgba(255,255,255,0.78)",
+    color: "#475569",
+    padding: 10,
+    borderRadius: 10,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700
+  },
+  activeStep: {
+    background: "#1234aa",
+    color: "white",
+    padding: 10,
+    borderRadius: 10,
+    textAlign: "center",
+    fontSize: 13,
+    fontWeight: 700
+  },
+  backButton: {
+    border: "1px solid #cbd5e1",
+    background: "white",
+    borderRadius: 12,
+    padding: "10px 14px",
+    cursor: "pointer",
+    marginBottom: 12
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(135px, 1fr))",
+    gap: 10
+  },
+  cardButton: {
+    minHeight: 104,
+    background: "white",
+    border: "none",
+    borderRadius: 15,
+    boxShadow: "0 6px 16px rgba(0,0,0,0.08)",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    textAlign: "center"
+  },
+  cardTitle: {
+    fontSize: 19,
+    color: "#1234aa",
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    lineHeight: 1.1,
+    wordBreak: "break-word"
+  },
+  cardText: {
+    marginTop: 5,
+    color: "#64748b",
+    fontSize: 12
+  },
+  panel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+    marginBottom: 12
+  },
+  sectionTitle: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 24
+  },
+  muted: {
+    color: "#64748b"
+  },
+  searchInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid #cbd5e1",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    marginTop: 12
+  },
+  twoColumn: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12
+  },
+  label: {
+    color: "#64748b",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: 800
+  },
+  bigTitle: {
+    color: "#1234aa",
+    fontSize: 30,
+    margin: "8px 0 18px",
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  inputLabel: {
+    display: "block",
+    fontWeight: 800,
+    marginBottom: 8
+  },
+  lengthInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    border: "1px solid #cbd5e1",
+    borderRadius: 14,
+    padding: 14,
+    fontSize: 20
+  },
+  warning: {
+    background: "#fff7ed",
+    color: "#9a3412",
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 12
+  },
+  primaryButton: {
+    marginTop: 14,
+    width: "100%",
+    border: "none",
+    borderRadius: 14,
+    background: "#ff7a00",
+    color: "white",
+    padding: "14px 16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  secondaryButton: {
+    marginTop: 10,
+    width: "100%",
+    border: "none",
+    borderRadius: 14,
+    background: "#1234aa",
+    color: "white",
+    padding: "14px 16px",
+    fontWeight: 800,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  disabledButton: {
+    marginTop: 14,
+    width: "100%",
+    border: "none",
+    borderRadius: 14,
+    background: "#cbd5e1",
+    color: "#64748b",
+    padding: "14px 16px",
+    fontWeight: 800,
+    cursor: "not-allowed",
+    fontSize: 16
+  },
+  colorButton: {
+    minHeight: 104,
+    borderRadius: 15,
+    boxShadow: "0 6px 16px rgba(0,0,0,0.10)",
+    cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 12,
+    textAlign: "center"
+  },
+  colorCode: {
+    fontSize: 12,
+    opacity: 0.85,
+    fontWeight: 800
+  },
+  colorName: {
+    fontSize: 17,
+    fontWeight: 900,
+    marginTop: 4,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif",
+    lineHeight: 1.1,
+    wordBreak: "break-word"
+  },
+  summaryLine: {
+    fontSize: 17
+  },
+  resultPanel: {
+    background: "#1234aa",
+    color: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  resultTitle: {
+    marginTop: 0,
+    fontSize: 24,
+    color: "white"
+  },
+  resultLabel: {
+    color: "#dbeafe",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: 800,
+    marginTop: 16
+  },
+  articleCode: {
+    background: "rgba(255,255,255,0.14)",
+    padding: 14,
+    borderRadius: 14,
+    fontFamily: "monospace",
+    fontSize: 18,
+    fontWeight: 900,
+    overflowWrap: "anywhere"
+  },
+  warningDark: {
+    background: "rgba(255,255,255,0.14)",
+    padding: 14,
+    borderRadius: 14,
+    color: "#fff7ed"
+  },
+  barcodeOuter: {
+    background: "white",
+    color: "black",
+    borderRadius: 14,
+    padding: 12,
+    overflow: "hidden"
+  },
+  barcodeSvg: {
+    width: "100%",
+    maxWidth: "100%",
+    height: "auto",
+    display: "block"
+  },
+  pickbonPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+    marginBottom: 12
+  },
+  pickbonHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+    marginBottom: 12
+  },
+  pickbonActions: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  emptyPickbon: {
+    background: "#f8fafc",
+    border: "1px dashed #cbd5e1",
+    color: "#64748b",
+    borderRadius: 14,
+    padding: 16
+  },
+  pickbonList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10
+  },
+  pickbonLine: {
+    border: "1px solid #e2e8f0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    background: "#ffffff"
+  },
+  pickbonLineDone: {
+    border: "1px solid #bbf7d0",
+    borderRadius: 14,
+    padding: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap",
+    background: "#f0fdf4"
+  },
+  pickbonLineMain: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 220,
+    flex: 1
+  },
+  pickbonCode: {
+    fontFamily: "monospace",
+    color: "#1234aa",
+    fontWeight: 800,
+    overflowWrap: "anywhere"
+  },
+  pickbonMeta: {
+    color: "#64748b",
+    fontSize: 12
+  },
+  pickbonLineControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  qtyLabel: {
+    fontSize: 12,
+    color: "#64748b",
+    fontWeight: 800
+  },
+  qtyInput: {
+    width: 76,
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    padding: 10,
+    fontSize: 16,
+    boxSizing: "border-box"
+  },
+  smallDarkButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#0f172a",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  smallOrangeButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#ff7a00",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  smallDangerButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#dc2626",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  logic4Box: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16
+  },
+  logic4Actions: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: 8
+  },
+  logic4Message: {
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+    fontWeight: 700
+  },
+  pickerLayout: {
+    display: "grid",
+    gridTemplateColumns: "380px 1fr",
+    gap: 14,
+    alignItems: "start"
+  },
+  orderListPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 16,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)"
+  },
+  pickerPanelHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12
+  },
+  orderCountBadge: {
+    background: "#dbeafe",
+    color: "#1234aa",
+    borderRadius: 999,
+    padding: "7px 11px",
+    fontWeight: 900,
+    fontSize: 13
+  },
+  orderList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 10,
+    marginTop: 12
+  },
+  orderCard: {
+    width: "100%",
+    background: "white",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  orderCardActive: {
+    width: "100%",
+    background: "#eff6ff",
+    border: "1px solid #1234aa",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(18,52,170,0.12)"
+  },
+  orderCardTop: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10
+  },
+  orderNumber: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 19,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  orderCustomer: {
+    margin: "5px 0 0",
+    color: "#334155",
+    fontSize: 14,
+    fontWeight: 800
+  },
+  orderStatus: {
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  agendaToggle: {
+    display: "flex",
+    gap: 8
+  },
+  smallLightButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#f1f5f9",
+    color: "#334155",
+    padding: "10px 12px",
+    fontWeight: 800,
+    cursor: "pointer"
+  },
+  calendarDayHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 10
+  },
+  calendarDayName: {
+    margin: 0,
+    color: "#64748b",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  calendarDate: {
+    margin: "3px 0 0",
+    color: "#1234aa",
+    fontSize: 28,
+    fontWeight: 900,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  calendarCount: {
+    background: "white",
+    color: "#475569",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  calendarOrder: {
+    width: "100%",
+    border: "none",
+    borderRadius: 12,
+    color: "white",
+    padding: 10,
+    textAlign: "left",
+    cursor: "pointer",
+    marginBottom: 8,
+    boxShadow: "0 6px 14px rgba(15,23,42,0.14)"
+  },
+  calendarOrderTime: {
+    display: "block",
+    fontSize: 12,
+    opacity: 0.9,
+    marginBottom: 2
+  },
+  selectedOrderPanel: {
+    background: "#1234aa",
+    color: "white",
+    borderRadius: 18,
+    padding: 20,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.18)"
+  },
+  selectedOrderLabel: {
+    margin: 0,
+    color: "#dbeafe",
+    fontSize: 12,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    fontWeight: 900
+  },
+  selectedOrderTitle: {
+    margin: 0,
+    color: "white",
+    fontSize: 34,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  selectedOrderCustomer: {
+    margin: "4px 0 0",
+    color: "#dbeafe",
+    fontSize: 16
+  },
+  selectedOrderMeta: {
+    margin: "9px 0 0",
+    color: "#dbeafe",
+    fontSize: 14
+  },
+  pickerBackRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap"
+  },
+  orderSearchInput: {
+    width: "100%",
+    maxWidth: 320,
+    boxSizing: "border-box",
+    border: "1px solid #cbd5e1",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16
+  },
+  orderColumnHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10
+  },
+  orderColumnTitle: {
+    margin: 0,
+    fontSize: 22,
+    color: "#0f172a",
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  todoBadge: {
+    background: "#eab308",
+    color: "#0f172a",
+    borderRadius: 999,
+    padding: "6px 11px",
+    fontWeight: 900
+  },
+  doneBadge: {
+    background: "#16a34a",
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 11px",
+    fontWeight: 900
+  },
+  todoOrderCard: {
+    width: "100%",
+    background: "rgba(255,255,255,0.78)",
+    border: "1px solid #fde047",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  todoOrderCardActive: {
+    width: "100%",
+    background: "white",
+    border: "2px solid #eab308",
+    borderRadius: 16,
+    padding: 13,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(234,179,8,0.20)"
+  },
+  doneOrderCard: {
+    width: "100%",
+    background: "rgba(255,255,255,0.78)",
+    border: "1px solid #86efac",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  doneOrderCardActive: {
+    width: "100%",
+    background: "white",
+    border: "2px solid #16a34a",
+    borderRadius: 16,
+    padding: 13,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(22,163,74,0.20)"
+  },
+  todoStatus: {
+    background: "#eab308",
+    color: "#0f172a",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  doneStatus: {
+    background: "#16a34a",
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  pickbonDoneText: {
+    color: "#166534",
+    background: "#dcfce7",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900,
+    width: "fit-content"
+  },
+  pickbonTodoText: {
+    color: "#854d0e",
+    background: "#fef9c3",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900,
+    width: "fit-content"
+  },
+  orderSplitGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 14,
+    minHeight: 520
+  },
+  todoOrdersPanel: {
+    background: "#fef9c3",
+    border: "1px solid #fde047",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  doneOrdersPanel: {
+    background: "#dcfce7",
+    border: "1px solid #86efac",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  agendaPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    height: "100%"
+  },
+  weekLabel: {
+    margin: "5px 0 0",
+    color: "#64748b",
+    fontWeight: 800
+  },
+  calendarDay: {
+    minHeight: 250,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 12
+  },
+  calendarDayActive: {
+    minHeight: 250,
+    background: "#eff6ff",
+    border: "2px solid #1234aa",
+    borderRadius: 16,
+    padding: 11
+  },
+  weekNav: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "nowrap",
+    alignItems: "center",
+    justifyContent: "flex-end"
+  },
+  openOrderWarning: {
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+    color: "#9a3412",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  warningButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#ff7a00",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
+  },
+  allOrdersPanel: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  paginationRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 14,
+    flexWrap: "wrap"
+  },
+  paginationText: {
+    color: "#475569",
+    fontWeight: 900,
+    fontSize: 13
+  },
+  pickerHomePage: {
+    display: "grid",
+    gridTemplateColumns: "1.15fr 1fr",
+    gap: 14,
+    alignItems: "stretch"
+  },
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 10
+  },
+  orderMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+    color: "#64748b",
+    fontSize: 13,
+    marginTop: 12,
+    flexWrap: "wrap"
+  },
+  selectedOrderContent: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+    marginTop: 8
+  },
+  openPickbonButton: {
+    border: "none",
+    borderRadius: 14,
+    background: "#ff7a00",
+    color: "white",
+    padding: "14px 18px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  orderProgressBar: {
+    width: "100%",
+    height: 8,
+    background: "rgba(15,23,42,0.10)",
+    borderRadius: 999,
+    overflow: "hidden",
+    marginTop: 10
+  },
+  orderProgressFill: {
+    height: "100%",
+    background: "#16a34a",
+    borderRadius: 999
+  },
+  orderProgressText: {
+    whiteSpace: "nowrap",
+    fontWeight: 800,
+    color: "#334155"
+  },
+  scanUnderPickbonPanel: {
+    background: "white",
+    borderRadius: 18,
+    padding: 18,
+    boxShadow: "0 8px 24px rgba(15,23,42,0.10)",
+    marginBottom: 12
+  },
+  scanUnderPickbonTitle: {
+    margin: "6px 0 16px",
+    color: "#1234aa",
+    fontSize: 24,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  smallDoneButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#16a34a",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
+  },
+  smallScanButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#1234aa",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
+  },
+  confirmOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15,23,42,0.52)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    padding: 16
+  },
+  confirmModal: {
+    width: "100%",
+    maxWidth: 420,
+    background: "white",
+    borderRadius: 18,
+    padding: 22,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.30)"
+  },
+  confirmTitle: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 26,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  confirmText: {
+    color: "#334155",
+    fontSize: 18,
+    lineHeight: 1.4,
+    margin: "14px 0 20px"
+  },
+  confirmActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10
+  },
+  confirmNoButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#e2e8f0",
+    color: "#0f172a",
+    padding: "14px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  confirmYesButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#16a34a",
+    color: "white",
+    padding: "14px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  orderReadyBox: {
+    background: "#dcfce7",
+    border: "1px solid #86efac",
+    color: "#166534",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  orderProcessedBox: {
+    background: "#ecfdf5",
+    border: "1px solid #22c55e",
+    color: "#166534",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  finishOrderButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#16a34a",
+    color: "white",
+    padding: "12px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  editProcessedOrderButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#0f172a",
+    color: "white",
+    padding: "12px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  pickbonLockedText: {
+    color: "#64748b",
+    fontWeight: 800,
+    fontSize: 13
+  },
+  requestedQtyBox: {
+    minWidth: 92,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: "8px 10px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    textAlign: "center"
+  },
+  lineProgressOpen: {
+    width: "fit-content",
+    background: "#fef9c3",
+    color: "#854d0e",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  lineProgressDone: {
+    width: "fit-content",
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  qtyMaxText: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: 800
+  },
+  pdfUploadPanel: {
+    background: "#eff6ff",
+    border: "1px solid #bfdbfe",
+    borderRadius: 18,
+    padding: 14,
+    marginBottom: 14,
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 12,
+    alignItems: "center"
+  },
+  pdfUploadTitle: {
+    margin: "4px 0 4px",
+    color: "#1234aa",
+    fontSize: 22,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  pdfUploadText: {
+    margin: 0,
+    color: "#475569",
+    fontSize: 13,
+    fontWeight: 700
+  },
+  pdfUploadButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#1234aa",
+    color: "white",
+    padding: "13px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    textAlign: "center"
+  },
+  pdfUploadMessage: {
+    gridColumn: "1 / -1",
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 12,
+    padding: 10,
+    fontWeight: 800
+  },
+  orderCardActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: 10
+  },
+  removeOrderButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "8px 10px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 12
+  },
+  selectedOrderButtons: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap"
+  },
+  removeSelectedOrderButton: {
+    border: "none",
+    borderRadius: 14,
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "14px 18px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  pdfDatePanel: {
+    gridColumn: "1 / -1",
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 10,
+    alignItems: "center",
+    background: "white",
+    border: "1px solid #bfdbfe",
+    borderRadius: 12,
+    padding: 10
+  },
+  pdfDateLabel: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  pdfDateInput: {
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    padding: "10px 12px",
+    fontWeight: 800,
+    color: "#0f172a",
+    background: "white"
+  },
+  selectedDateEdit: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 10,
+    alignItems: "center",
+    background: "rgba(255,255,255,0.12)",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12
+  },
+  pickbonDateEdit: {
+    display: "grid",
+    gridTemplateColumns: "auto minmax(150px, 220px)",
+    gap: 10,
+    alignItems: "center",
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 12,
+    maxWidth: 380
+  },
+};
