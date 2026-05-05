@@ -2,6 +2,62 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
 
+const SUPABASE_URL = "https://wfwrjcbakalyshtvxa.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_AM7ydhqwUsSuc3cN1KiYaw_o8A5N9Il";
+const SUPABASE_ORDERS_ENDPOINT = `${SUPABASE_URL}/rest/v1/orders`;
+
+async function supabaseRequest(path = "", options = {}) {
+  const response = await fetch(`${SUPABASE_ORDERS_ENDPOINT}${path}`, {
+    ...options,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Supabase aanvraag mislukt.");
+  }
+
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+function orderFromDb(row) {
+  return {
+    id: row.id,
+    klant: row.klant || "",
+    tijd: row.tijd || "",
+    status: row.status || "Open",
+    regels: Number(row.regels || 0),
+    kleur: row.kleur || "#eab308",
+    plannedDate: row.planned_date || "",
+    source: row.source || "",
+    rows: Array.isArray(row.rows) ? row.rows : [],
+    rawPdfText: row.raw_pdf_text || ""
+  };
+}
+
+function orderToDb(order) {
+  return {
+    id: String(order.id),
+    klant: order.klant || "",
+    tijd: order.tijd || "",
+    status: order.status || "Open",
+    regels: Number(order.regels || order.rows?.length || 0),
+    kleur: order.kleur || "#eab308",
+    planned_date: order.plannedDate || null,
+    source: order.source || "",
+    rows: order.rows || [],
+    raw_pdf_text: order.rawPdfText || null,
+    updated_at: new Date().toISOString()
+  };
+}
+
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
   HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -677,7 +733,8 @@ export default function App() {
   const [pickerOrderPage, setPickerOrderPage] = useState(1);
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
   const [processedOrderIds, setProcessedOrderIds] = useState(() => safeJson("staaltoolProcessedOrderIds", []));
-  const [uploadedPdfOrders, setUploadedPdfOrders] = useState(() => safeJson("staaltoolUploadedPdfOrders", []));
+  const [uploadedPdfOrders, setUploadedPdfOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const [hiddenDemoOrderIds, setHiddenDemoOrderIds] = useState(() => safeJson("staaltoolHiddenDemoOrderIds", []));
   const [pdfUploadMessage, setPdfUploadMessage] = useState("");
   const [lastUploadedOrderId, setLastUploadedOrderId] = useState("");
@@ -720,19 +777,11 @@ export default function App() {
   const canRemoveOrders = isAdmin;
 
   const effectivePickerOrders = useMemo(() => {
-    // Alleen 1 vaste testorder + echte beheerderorders tonen.
-    // De overige demo/testorders zijn uitgeschakeld.
-    const oneTestOrder = getDemoOrdersWithDates()
-      .filter((order) => !hiddenDemoOrderIds.includes(order.id))
-      .slice(0, 1);
-
-    const datedPickerOrders = [...oneTestOrder, ...uploadedPdfOrders];
-
-    return datedPickerOrders.map((order) => ({
+    return uploadedPdfOrders.map((order) => ({
       ...order,
       status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
     }));
-  }, [hiddenDemoOrderIds, uploadedPdfOrders, processedOrderIds]);
+  }, [uploadedPdfOrders, processedOrderIds]);
 
   const allPickerOrdersSorted = effectivePickerOrders
     .slice()
@@ -791,9 +840,6 @@ export default function App() {
     localStorage.setItem("staaltoolProcessedOrderIds", JSON.stringify(processedOrderIds));
   }, [processedOrderIds]);
 
-  useEffect(() => {
-    localStorage.setItem("staaltoolUploadedPdfOrders", JSON.stringify(uploadedPdfOrders));
-  }, [uploadedPdfOrders]);
 
   useEffect(() => {
     localStorage.setItem("staaltoolHiddenDemoOrderIds", JSON.stringify(hiddenDemoOrderIds));
@@ -806,6 +852,11 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("staaltoolPickbonNumber", pickbonNumber || "");
   }, [pickbonNumber]);
+
+  useEffect(() => {
+    if (!loggedIn) return;
+    loadOrdersFromSupabase();
+  }, [loggedIn]);
 
   useEffect(() => {
     if (!loggedIn) return;
@@ -824,6 +875,54 @@ export default function App() {
     } catch {
       return fallback;
     }
+  }
+
+  async function loadOrdersFromSupabase() {
+    setOrdersLoading(true);
+    setSearchError("");
+
+    try {
+      const data = await supabaseRequest("?select=*&order=planned_date.asc,created_at.asc");
+      const orders = (data || []).map(orderFromDb);
+      setUploadedPdfOrders(orders);
+      setProcessedOrderIds(orders.filter((order) => order.status === "Gereed").map((order) => order.id));
+
+      if (orders.length) {
+        setSelectedPickerOrder((currentOrder) => {
+          if (currentOrder && orders.some((order) => order.id === currentOrder.id)) {
+            return orders.find((order) => order.id === currentOrder.id);
+          }
+          return orders[0];
+        });
+      } else {
+        setSelectedPickerOrder(null);
+      }
+    } catch (err) {
+      console.error(err);
+      setSearchError("Orders konden niet uit Supabase worden geladen. Controleer Supabase of RLS/policies.");
+    } finally {
+      setOrdersLoading(false);
+    }
+  }
+
+  async function saveOrderToSupabase(order) {
+    await supabaseRequest("?on_conflict=id", {
+      method: "POST",
+      headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+      body: JSON.stringify(orderToDb(order))
+    });
+  }
+
+  async function deleteOrderFromSupabase(orderId) {
+    await supabaseRequest(`?id=eq.${encodeURIComponent(orderId)}`, { method: "DELETE" });
+  }
+
+  async function updateOrderInSupabase(orderId, updates) {
+    await supabaseRequest(`?id=eq.${encodeURIComponent(orderId)}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...updates, updated_at: new Date().toISOString() })
+    });
   }
 
   async function handlePdfUpload(event) {
@@ -858,6 +957,8 @@ export default function App() {
         event.target.value = "";
         return;
       }
+
+      await saveOrderToSupabase(order);
 
       setUploadedPdfOrders((currentOrders) => {
         const withoutSameOrder = currentOrders.filter((item) => item.id !== order.id);
@@ -1287,17 +1388,18 @@ export default function App() {
 
     if (!confirmRemoveOrderId) return;
 
-    const isUploadedOrder = uploadedPdfOrders.some((order) => order.id === confirmRemoveOrderId);
+    deleteOrderFromSupabase(confirmRemoveOrderId).catch((err) => {
+      console.error(err);
+      setSearchError("Order kon niet uit Supabase worden verwijderd.");
+    });
 
-    if (isUploadedOrder) {
-      setUploadedPdfOrders((currentOrders) => currentOrders.filter((order) => order.id !== confirmRemoveOrderId));
-    } else {
-      setHiddenDemoOrderIds((currentIds) =>
-        currentIds.includes(confirmRemoveOrderId) ? currentIds : [...currentIds, confirmRemoveOrderId]
-      );
-    }
+    setUploadedPdfOrders((currentOrders) =>
+      currentOrders.filter((order) => order.id !== confirmRemoveOrderId)
+    );
 
-    setProcessedOrderIds((currentIds) => currentIds.filter((orderId) => orderId !== confirmRemoveOrderId));
+    setProcessedOrderIds((currentIds) =>
+      currentIds.filter((orderId) => orderId !== confirmRemoveOrderId)
+    );
 
     if (selectedPickerOrder?.id === confirmRemoveOrderId) {
       const remainingOrders = effectivePickerOrders.filter((order) => order.id !== confirmRemoveOrderId);
@@ -1322,8 +1424,15 @@ export default function App() {
 
     if (!orderId || !nextDate) return;
 
+    updateOrderInSupabase(orderId, { planned_date: nextDate }).catch((err) => {
+      console.error(err);
+      setSearchError("Plandatum kon niet worden opgeslagen in Supabase.");
+    });
+
     setUploadedPdfOrders((currentOrders) =>
-      currentOrders.map((order) => (order.id === orderId ? { ...order, plannedDate: nextDate } : order))
+      currentOrders.map((order) =>
+        order.id === orderId ? { ...order, plannedDate: nextDate } : order
+      )
     );
 
     setSelectedPickerOrder((currentOrder) =>
@@ -1707,6 +1816,10 @@ export default function App() {
                   <h2 style={styles.sectionTitle}>Orders verwerken</h2>
                 </div>
 
+                <button style={styles.smallLightButton} onClick={loadOrdersFromSupabase}>
+                  Vernieuwen
+                </button>
+
                 <input
                   style={styles.orderSearchInput}
                   value={pickerOrderQuery}
@@ -1750,6 +1863,8 @@ export default function App() {
                   <h3 style={styles.orderColumnTitle}>Alle orders</h3>
                   <span style={styles.orderCountBadge}>{allFilteredPickerOrders.length}</span>
                 </div>
+
+                {ordersLoading && <div style={styles.pdfUploadMessage}>Orders laden uit Supabase...</div>}
 
                 <div style={styles.orderList}>
                   {pagedPickerOrders.length === 0 && (
