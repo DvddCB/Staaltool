@@ -513,6 +513,66 @@ function parseDutchPdfDate(text) {
   return `${year}-${month}-${day}`;
 }
 
+
+function buildLogic4ArticleCodeCandidates(lines) {
+  const candidates = [];
+
+  lines.forEach((line, index) => {
+    const currentDigits = (line.match(/\d+/g) || []).join("");
+    const nextDigits = ((lines[index + 1] || "").match(/\d+/g) || []).join("");
+    const combinedWithNext = currentDigits + nextDigits;
+
+    // Normale codes op 1 regel
+    (line.match(/\b\d{12,24}\b/g) || []).forEach((code) => {
+      candidates.push({
+        code,
+        lineIndex: index,
+        sourceLine: line
+      });
+    });
+
+    // Logic4 breekt artikelnummer soms af over 2 regels:
+    // 24010110096300 + 091 = 24010110096300091
+    if (currentDigits.length >= 12 && currentDigits.length <= 16 && nextDigits.length >= 1 && nextDigits.length <= 6) {
+      candidates.push({
+        code: combinedWithNext,
+        lineIndex: index,
+        sourceLine: `${line} ${lines[index + 1] || ""}`
+      });
+    }
+
+    // Extra fallback: alle cijfers in 2 regels samen zoeken
+    if (combinedWithNext.length >= 15 && combinedWithNext.length <= 24) {
+      candidates.push({
+        code: combinedWithNext,
+        lineIndex: index,
+        sourceLine: `${line} ${lines[index + 1] || ""}`
+      });
+    }
+  });
+
+  return candidates;
+}
+
+function getLogic4QuantityFromLines(lines, lineIndex, fallback = 1) {
+  const windowText = [
+    lines[lineIndex] || "",
+    lines[lineIndex + 1] || "",
+    lines[lineIndex + 2] || ""
+  ].join(" ");
+
+  const numbers = (windowText.match(/\b\d+\b/g) || [])
+    .map((value) => Number(value))
+    .filter((value) => value >= 0 && value <= 999);
+
+  // In jullie pickbon staan rechts meestal:
+  // Nog te leveren / Gereserveerd / Reeds gepickt / Nu te picken
+  // "Nu te picken" is de laatste kleine waarde.
+  const positiveNumbers = numbers.filter((value) => value > 0);
+
+  return positiveNumbers.length ? positiveNumbers[positiveNumbers.length - 1] : fallback;
+}
+
 function parseLogic4PickbonTextToOrder(text, fileName) {
   const cleanText = normalizeOcrText(text);
   const lines = String(text || "")
@@ -535,40 +595,29 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
 
   const articleRows = [];
   const seenCodes = new Set();
+  const candidates = buildLogic4ArticleCodeCandidates(lines);
 
-  lines.forEach((line, lineIndex) => {
-    const combinedLine = `${line} ${lines[lineIndex + 1] || ""}`.replace(/\s+/g, " ");
-    const codes = combinedLine.match(/\b\d{12,24}\b/g) || [];
+  candidates.forEach((candidate) => {
+    const rawCode = String(candidate.code || "").replace(/\D/g, "");
+    if (seenCodes.has(rawCode)) return;
 
-    codes.forEach((rawCode) => {
-      if (seenCodes.has(rawCode)) return;
+    const parsed = parseArticleCode(rawCode);
+    if (!parsed) return;
 
-      const parsed = parseArticleCode(rawCode);
-      if (!parsed) return;
+    seenCodes.add(rawCode);
 
-      seenCodes.add(rawCode);
+    const quantity = getLogic4QuantityFromLines(lines, candidate.lineIndex, 1);
+    const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || rawCode;
 
-      const afterCode = combinedLine.slice(combinedLine.indexOf(rawCode) + rawCode.length);
-      const quantityCandidates = (afterCode.match(/\b\d+\b/g) || [])
-        .map((value) => Number(value))
-        .filter((value) => value > 0 && value <= 999);
-
-      const quantity = quantityCandidates.length
-        ? quantityCandidates[quantityCandidates.length - 1]
-        : 1;
-
-      const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || rawCode;
-
-      articleRows.push({
-        articleCode,
-        description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
-        type: parsed.type,
-        size: parsed.size,
-        length: parsed.length,
-        colorCode: parsed.colorCode,
-        colorName: parsed.colorName,
-        quantity
-      });
+    articleRows.push({
+      articleCode,
+      description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
+      type: parsed.type,
+      size: parsed.size,
+      length: parsed.length,
+      colorCode: parsed.colorCode,
+      colorName: parsed.colorName,
+      quantity
     });
   });
 
@@ -589,6 +638,7 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     source: "PDF"
   };
 }
+
 
 async function readPdfTextWithPdfJs(file) {
   const pdfjsLib = await loadPdfJsFromCdn();
