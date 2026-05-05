@@ -2174,6 +2174,20 @@ export default function App() {
                   </div>
                 )}
 
+                {currentSelectedPickerOrder?.source === "PDF" && (
+                  <div style={styles.pickbonDateEdit}>
+                    <label style={styles.pdfDateLabel}>Plandatum</label>
+                    <input
+                      style={styles.pdfDateInput}
+                      type="date"
+                      value={currentSelectedPickerOrder?.plannedDate || toIsoDate(new Date())}
+                      onChange={(event) =>
+                        updateUploadedOrderDate(currentSelectedPickerOrder.id, event.target.value)
+                      }
+                    />
+                  </div>
+                )}
+
                 {pickbonLines.length === 0 ? (
                   <div style={styles.emptyPickbon}>
                     Nog geen artikelen gescand. Scan een barcode of voer handmatig een artikelcode in.
@@ -3755,5 +3769,18 @@ const styles = {
     borderRadius: 12,
     padding: 10,
     marginBottom: 12
+  },
+  pickbonDateEdit: {
+    display: "grid",
+    gridTemplateColumns: "auto minmax(150px, 220px)",
+    gap: 10,
+    alignItems: "center",
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 10,
+    marginBottom: 12,
+    maxWidth: 380
   },
 };
