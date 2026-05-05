@@ -902,58 +902,118 @@ export default function App() {
         {searchError && <div style={styles.scanError}>{searchError}</div>}
 
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
-          <section style={styles.pickerLayout}>
-            <aside style={styles.orderListPanel}>
+          <section style={styles.pickerHomePage}>
+            <section style={styles.panel}>
               <div style={styles.pickerPanelHeader}>
                 <div>
-                  <p style={styles.label}>Vandaag</p>
-                  <h2 style={styles.sectionTitle}>Orderlijst</h2>
+                  <p style={styles.label}>Artikel Picker</p>
+                  <h2 style={styles.sectionTitle}>Orders verwerken</h2>
                 </div>
-                <span style={styles.orderCountBadge}>{demoPickerOrders.length} orders</span>
+
+                <input
+                  style={styles.orderSearchInput}
+                  value={pickerOrderQuery}
+                  onChange={(e) => setPickerOrderQuery(e.target.value)}
+                  placeholder="Zoek order of klant..."
+                />
               </div>
 
-              <input
-                style={styles.searchInput}
-                value={pickerOrderQuery}
-                onChange={(e) => setPickerOrderQuery(e.target.value)}
-                placeholder="Zoek order, klant of artikel..."
-              />
-
-              <div style={styles.orderList}>
-                {demoPickerOrders
-                  .filter((order) =>
-                    (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
-                  )
-                  .map((order) => (
-                    <button
-                      key={order.id}
-                      style={
-                        selectedPickerOrder?.id === order.id
-                          ? styles.orderCardActive
-                          : styles.orderCard
+              <div style={styles.orderSplitGrid}>
+                <div style={styles.todoOrdersPanel}>
+                  <div style={styles.orderColumnHeader}>
+                    <h3 style={styles.orderColumnTitle}>Nog te doen</h3>
+                    <span style={styles.todoBadge}>
+                      {
+                        demoPickerOrders.filter((order) =>
+                          order.status !== "Gereed" &&
+                          (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+                        ).length
                       }
-                      onClick={() => setSelectedPickerOrder(order)}
-                    >
-                      <div style={styles.orderCardTop}>
-                        <div>
-                          <p style={styles.orderNumber}>{order.id}</p>
-                          <p style={styles.orderCustomer}>{order.klant}</p>
-                        </div>
-                        <span style={{ ...styles.orderStatus, background: order.kleur }}>
-                          {order.status}
-                        </span>
-                      </div>
+                    </span>
+                  </div>
 
-                      <div style={styles.orderMeta}>
-                        <span>{order.tijd}</span>
-                        <span>{order.regels} regels</span>
-                      </div>
-                    </button>
-                  ))}
+                  <div style={styles.orderList}>
+                    {demoPickerOrders
+                      .filter((order) =>
+                        order.status !== "Gereed" &&
+                        (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+                      )
+                      .map((order) => (
+                        <button
+                          key={order.id}
+                          style={
+                            selectedPickerOrder?.id === order.id
+                              ? styles.todoOrderCardActive
+                              : styles.todoOrderCard
+                          }
+                          onClick={() => setSelectedPickerOrder(order)}
+                        >
+                          <div style={styles.orderCardTop}>
+                            <div>
+                              <p style={styles.orderNumber}>{order.id}</p>
+                              <p style={styles.orderCustomer}>{order.klant}</p>
+                            </div>
+                            <span style={styles.todoStatus}>Nog doen</span>
+                          </div>
+
+                          <div style={styles.orderMeta}>
+                            <span>{order.tijd}</span>
+                            <span>{order.regels} regels</span>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+
+                <div style={styles.doneOrdersPanel}>
+                  <div style={styles.orderColumnHeader}>
+                    <h3 style={styles.orderColumnTitle}>Verwerkt</h3>
+                    <span style={styles.doneBadge}>
+                      {
+                        demoPickerOrders.filter((order) =>
+                          order.status === "Gereed" &&
+                          (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+                        ).length
+                      }
+                    </span>
+                  </div>
+
+                  <div style={styles.orderList}>
+                    {demoPickerOrders
+                      .filter((order) =>
+                        order.status === "Gereed" &&
+                        (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+                      )
+                      .map((order) => (
+                        <button
+                          key={order.id}
+                          style={
+                            selectedPickerOrder?.id === order.id
+                              ? styles.doneOrderCardActive
+                              : styles.doneOrderCard
+                          }
+                          onClick={() => setSelectedPickerOrder(order)}
+                        >
+                          <div style={styles.orderCardTop}>
+                            <div>
+                              <p style={styles.orderNumber}>{order.id}</p>
+                              <p style={styles.orderCustomer}>{order.klant}</p>
+                            </div>
+                            <span style={styles.doneStatus}>✓ Verwerkt</span>
+                          </div>
+
+                          <div style={styles.orderMeta}>
+                            <span>{order.tijd}</span>
+                            <span>{order.regels} regels</span>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
               </div>
-            </aside>
+            </section>
 
-            <main style={styles.agendaPanel}>
+            <section style={styles.agendaPanel}>
               <section style={styles.panel}>
                 <div style={styles.pickerPanelHeader}>
                   <div>
@@ -985,11 +1045,15 @@ export default function App() {
                         demoPickerOrders.map((order) => (
                           <button
                             key={order.id}
-                            style={{ ...styles.calendarOrder, background: order.kleur }}
+                            style={{
+                              ...styles.calendarOrder,
+                              background: order.status === "Gereed" ? "#16a34a" : "#eab308",
+                              color: order.status === "Gereed" ? "white" : "#0f172a"
+                            }}
                             onClick={() => setSelectedPickerOrder(order)}
                           >
                             <span style={styles.calendarOrderTime}>{order.tijd}</span>
-                            <strong>{order.id}</strong>
+                            <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
                           </button>
                         ))}
                     </div>
@@ -1013,7 +1077,7 @@ export default function App() {
                   </button>
                 </div>
               </section>
-            </main>
+            </section>
           </section>
         ) : selectedModule === "Artikelzoeker" && step !== "result" ? (
           <>
@@ -1034,30 +1098,7 @@ export default function App() {
             <section style={styles.twoColumn}>
               <div style={styles.panel}>
                 <p style={styles.label}>Artikelzoeker / pickbon</p>
-                <h2 style={styles.bigTitle}>Scan bestellingen en verwerk pickbon</h2>
-
-                <div style={styles.logic4Box}>
-                  <p style={styles.label}>Logic4 order ophalen</p>
-
-                  <label style={styles.inputLabel}>Logic4 ordernummer</label>
-                  <input
-                    style={styles.lengthInput}
-                    value={logic4OrderNumber}
-                    onChange={(e) => setLogic4OrderNumber(e.target.value)}
-                    placeholder="Bijv. 12345"
-                  />
-
-                  <div style={styles.logic4Actions}>
-                    <button style={styles.secondaryButton} type="button" onClick={loadLogic4Order}>
-                      Order ophalen
-                    </button>
-                    <button style={styles.smallDarkButton} type="button" onClick={loadMockLogic4Order}>
-                      Testorder laden
-                    </button>
-                  </div>
-
-                  {logic4Message && <div style={styles.logic4Message}>{logic4Message}</div>}
-                </div>
+                <h2 style={styles.bigTitle}>Pickbon verwerken</h2>
 
                 <label style={styles.inputLabel}>Pickbonnummer / ordernummer</label>
                 <input
@@ -1083,7 +1124,7 @@ export default function App() {
                 </form>
 
                 <button style={styles.secondaryButton} onClick={startScanner}>
-                  Barcode scannen met camera
+                  Artikel barcode scannen
                 </button>
               </div>
 
@@ -1117,6 +1158,11 @@ export default function App() {
                         <div style={styles.pickbonLineMain}>
                           <strong>{line.description}</strong>
                           <span style={styles.pickbonCode}>{line.articleCode}</span>
+                          {line.scannedQuantity !== undefined && (
+                            <span style={line.processed ? styles.pickbonDoneText : styles.pickbonTodoText}>
+                              {line.processed ? "✓ Verwerkt" : `Nog te verwerken: ${Number(line.quantity || 0) - Number(line.scannedQuantity || 0)}`}
+                            </span>
+                          )}
                           {line.scannedQuantity !== undefined && (
                             <span style={styles.pickbonMeta}>
                               Gescand: {line.scannedQuantity} / {line.quantity}
@@ -2168,5 +2214,136 @@ const styles = {
     display: "flex",
     gap: 8,
     flexWrap: "wrap"
+  },
+  pickerHomePage: {
+    display: "grid",
+    gridTemplateColumns: "1.05fr 1fr",
+    gap: 14,
+    alignItems: "start"
+  },
+  orderSearchInput: {
+    width: "100%",
+    maxWidth: 320,
+    boxSizing: "border-box",
+    border: "1px solid #cbd5e1",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16
+  },
+  orderSplitGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 14
+  },
+  todoOrdersPanel: {
+    background: "#fef9c3",
+    border: "1px solid #fde047",
+    borderRadius: 18,
+    padding: 14
+  },
+  doneOrdersPanel: {
+    background: "#dcfce7",
+    border: "1px solid #86efac",
+    borderRadius: 18,
+    padding: 14
+  },
+  orderColumnHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 10
+  },
+  orderColumnTitle: {
+    margin: 0,
+    fontSize: 22,
+    color: "#0f172a",
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  todoBadge: {
+    background: "#eab308",
+    color: "#0f172a",
+    borderRadius: 999,
+    padding: "6px 11px",
+    fontWeight: 900
+  },
+  doneBadge: {
+    background: "#16a34a",
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 11px",
+    fontWeight: 900
+  },
+  todoOrderCard: {
+    width: "100%",
+    background: "rgba(255,255,255,0.78)",
+    border: "1px solid #fde047",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  todoOrderCardActive: {
+    width: "100%",
+    background: "white",
+    border: "2px solid #eab308",
+    borderRadius: 16,
+    padding: 13,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(234,179,8,0.20)"
+  },
+  doneOrderCard: {
+    width: "100%",
+    background: "rgba(255,255,255,0.78)",
+    border: "1px solid #86efac",
+    borderRadius: 16,
+    padding: 14,
+    textAlign: "left",
+    cursor: "pointer"
+  },
+  doneOrderCardActive: {
+    width: "100%",
+    background: "white",
+    border: "2px solid #16a34a",
+    borderRadius: 16,
+    padding: 13,
+    textAlign: "left",
+    cursor: "pointer",
+    boxShadow: "0 8px 20px rgba(22,163,74,0.20)"
+  },
+  todoStatus: {
+    background: "#eab308",
+    color: "#0f172a",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  doneStatus: {
+    background: "#16a34a",
+    color: "white",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 900
+  },
+  pickbonDoneText: {
+    color: "#166534",
+    background: "#dcfce7",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900,
+    width: "fit-content"
+  },
+  pickbonTodoText: {
+    color: "#854d0e",
+    background: "#fef9c3",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900,
+    width: "fit-content"
   },
 };
