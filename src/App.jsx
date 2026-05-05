@@ -359,6 +359,47 @@ function isSameDate(a, b) {
   return a.toDateString() === b.toDateString();
 }
 
+function toIsoDate(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getDemoOrdersWithDates() {
+  const today = new Date();
+  const thisWeek = startOfWeek(today);
+  const previousWeek = addWeeks(thisWeek, -1);
+  const nextWeek = addWeeks(thisWeek, 1);
+
+  return demoPickerOrders.map((order, index) => {
+    const plannedDates = [
+      addDays(previousWeek, 2),
+      addDays(thisWeek, 1),
+      addDays(thisWeek, 3),
+      addDays(nextWeek, 1)
+    ];
+
+    return {
+      ...order,
+      plannedDate: toIsoDate(plannedDates[index] || today)
+    };
+  });
+}
+
+function getOrderDate(order) {
+  const date = new Date(order.plannedDate + "T00:00:00");
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function isOrderInWeek(order, weekStart) {
+  const orderDate = getOrderDate(order);
+  const weekEnd = addDays(weekStart, 5);
+  return orderDate >= weekStart && orderDate < weekEnd;
+}
+
+function isOrderOpen(order) {
+  return order.status !== "Gereed";
+}
+
 
 export default function App() {
   const controlsRef = useRef(null);
@@ -367,7 +408,7 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [selectedModule, setSelectedModule] = useState("");
   const [pickerView, setPickerView] = useState("home");
-  const [selectedPickerOrder, setSelectedPickerOrder] = useState(demoPickerOrders[1]);
+  const [selectedPickerOrder, setSelectedPickerOrder] = useState(() => getDemoOrdersWithDates()[1]);
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
 
@@ -404,6 +445,14 @@ export default function App() {
   );
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
+  const datedPickerOrders = getDemoOrdersWithDates();
+  const visiblePickerOrders = datedPickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
+  const filteredVisiblePickerOrders = visiblePickerOrders.filter((order) =>
+    (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
+  );
+  const oldestOpenOrderOutsideWeek = datedPickerOrders
+    .filter((order) => isOrderOpen(order) && !isOrderInWeek(order, pickerWeekStart))
+    .sort((a, b) => getOrderDate(a) - getOrderDate(b))[0];
 
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
@@ -979,20 +1028,14 @@ export default function App() {
                     <h3 style={styles.orderColumnTitle}>Nog te doen</h3>
                     <span style={styles.todoBadge}>
                       {
-                        demoPickerOrders.filter((order) =>
-                          order.status !== "Gereed" &&
-                          (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
-                        ).length
+                        filteredVisiblePickerOrders.filter((order) => order.status !== "Gereed").length
                       }
                     </span>
                   </div>
 
                   <div style={styles.orderList}>
-                    {demoPickerOrders
-                      .filter((order) =>
-                        order.status !== "Gereed" &&
-                        (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
-                      )
+                    {filteredVisiblePickerOrders
+                      .filter((order) => order.status !== "Gereed")
                       .map((order) => (
                         <button
                           key={order.id}
@@ -1013,6 +1056,7 @@ export default function App() {
 
                           <div style={styles.orderMeta}>
                             <span>{order.tijd}</span>
+                            <span>{formatDutchDate(getOrderDate(order))}</span>
                             <span>{order.regels} regels</span>
                           </div>
                         </button>
@@ -1025,20 +1069,14 @@ export default function App() {
                     <h3 style={styles.orderColumnTitle}>Verwerkt</h3>
                     <span style={styles.doneBadge}>
                       {
-                        demoPickerOrders.filter((order) =>
-                          order.status === "Gereed" &&
-                          (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
-                        ).length
+                        filteredVisiblePickerOrders.filter((order) => order.status === "Gereed").length
                       }
                     </span>
                   </div>
 
                   <div style={styles.orderList}>
-                    {demoPickerOrders
-                      .filter((order) =>
-                        order.status === "Gereed" &&
-                        (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
-                      )
+                    {filteredVisiblePickerOrders
+                      .filter((order) => order.status === "Gereed")
                       .map((order) => (
                         <button
                           key={order.id}
@@ -1059,6 +1097,7 @@ export default function App() {
 
                           <div style={styles.orderMeta}>
                             <span>{order.tijd}</span>
+                            <span>{formatDutchDate(getOrderDate(order))}</span>
                             <span>{order.regels} regels</span>
                           </div>
                         </button>
@@ -1099,6 +1138,24 @@ export default function App() {
                   </div>
                 </div>
 
+                {oldestOpenOrderOutsideWeek && (
+                  <div style={styles.openOrderWarning}>
+                    <div>
+                      <strong>Let op: er staan nog open orders buiten deze week.</strong>
+                      <span> Oudste: {oldestOpenOrderOutsideWeek.id} · {formatDutchDate(getOrderDate(oldestOpenOrderOutsideWeek))}</span>
+                    </div>
+                    <button
+                      style={styles.warningButton}
+                      onClick={() => {
+                        setPickerWeekStart(startOfWeek(getOrderDate(oldestOpenOrderOutsideWeek)));
+                        setSelectedPickerOrder(oldestOpenOrderOutsideWeek);
+                      }}
+                    >
+                      Ga naar oudste order
+                    </button>
+                  </div>
+                )}
+
                 <div style={styles.calendarGrid}>
                   {pickerWeekDays.map((day, index) => {
                     const isToday = isSameDate(day.date, today);
@@ -1115,12 +1172,13 @@ export default function App() {
                             <p style={styles.calendarDate}>{day.datum}</p>
                           </div>
                           <span style={styles.calendarCount}>
-                            {showOrders ? demoPickerOrders.length : 0}
+                            {visiblePickerOrders.filter((order) => isSameDate(getOrderDate(order), day.date)).length}
                           </span>
                         </div>
 
-                        {showOrders &&
-                          demoPickerOrders.map((order) => (
+                        {visiblePickerOrders
+                          .filter((order) => isSameDate(getOrderDate(order), day.date))
+                          .map((order) => (
                             <button
                               key={order.id}
                               style={{
@@ -1147,7 +1205,7 @@ export default function App() {
                     <h2 style={styles.selectedOrderTitle}>{selectedPickerOrder?.id}</h2>
                     <p style={styles.selectedOrderCustomer}>{selectedPickerOrder?.klant}</p>
                     <p style={styles.selectedOrderMeta}>
-                      Tijd: {selectedPickerOrder?.tijd} · Regels: {selectedPickerOrder?.regels} · Status: {selectedPickerOrder?.status}
+                      Datum: {selectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(selectedPickerOrder)) : ""} · Tijd: {selectedPickerOrder?.tijd} · Regels: {selectedPickerOrder?.regels} · Status: {selectedPickerOrder?.status}
                     </p>
                   </div>
 
@@ -2494,5 +2552,27 @@ const styles = {
     flexWrap: "nowrap",
     alignItems: "center",
     justifyContent: "flex-end"
+  },
+  openOrderWarning: {
+    background: "#fff7ed",
+    border: "1px solid #fdba74",
+    color: "#9a3412",
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    flexWrap: "wrap"
+  },
+  warningButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#ff7a00",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
   },
 };
