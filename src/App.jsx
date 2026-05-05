@@ -967,45 +967,69 @@ export default function App() {
     setPdfUploadMessage("PDF wordt gelezen...");
     setSearchError("");
 
-    try {
-      const { pdf, text } = await readPdfTextWithPdfJs(file);
-      let fullText = text || "";
-      let order = parseLogic4PickbonTextToOrder(fullText, file.name);
+    let pdf = null;
+    let fullText = "";
+    let order = null;
 
-      if (!order.rows.length) {
-        setPdfUploadMessage("PDF bevat geen tekst of geen artikelregels. OCR wordt gestart...");
+    try {
+      const result = await readPdfTextWithPdfJs(file);
+      pdf = result.pdf;
+      fullText = result.text || "";
+      order = parseLogic4PickbonTextToOrder(fullText, file.name);
+    } catch (err) {
+      console.error("PDF.js fout:", err);
+      setPdfUploadMessage("");
+      setSearchError("PDF kon niet worden geopend door PDF.js. Controleer of het bestand een geldige PDF is.");
+      event.target.value = "";
+      return;
+    }
+
+    if (!order.rows.length && pdf) {
+      try {
+        setPdfUploadMessage("PDF bevat geen herkenbare tekst. OCR wordt gestart...");
         const ocrText = await readPdfTextWithOcr(pdf);
         fullText = `${fullText}\n${ocrText}`;
         order = parseLogic4PickbonTextToOrder(fullText, file.name);
-      }
-
-      if (!order.rows.length) {
-        console.log("PDF tekst/OCR tekst:", fullText);
+      } catch (err) {
+        console.error("OCR fout:", err);
         setPdfUploadMessage("");
-        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Controleer of de PDF lijkt op de Logic4 pickbon of stuur de OCR tekst/screenshot.");
+        setSearchError("OCR kon niet worden uitgevoerd. De PDF is waarschijnlijk een scan/afbeelding en OCR laden lukt niet in deze browser.");
         event.target.value = "";
         return;
       }
-
-      await saveOrderToSupabase(order);
-
-      setUploadedPdfOrders((currentOrders) => {
-        const withoutSameOrder = currentOrders.filter((item) => item.id !== order.id);
-        return [...withoutSameOrder, order];
-      });
-
-      setSelectedPickerOrder(order);
-      setLastUploadedOrderId(order.id);
-      setPickerWeekStart(startOfWeek(getOrderDate(order)));
-      setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s). Kies eventueel direct een plandatum.`);
-      event.target.value = "";
-    } catch (err) {
-      console.error(err);
-      setPdfUploadMessage("");
-      setSearchError("PDF kon niet worden gelezen. Probeer opnieuw of stuur een voorbeeld-PDF om de herkenning te verbeteren.");
-      event.target.value = "";
     }
+
+    if (!order || !order.rows.length) {
+      console.log("PDF tekst/OCR tekst:", fullText);
+      setPdfUploadMessage("");
+      setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Stuur de PDF of OCR tekst zodat de herkenning aangepast kan worden.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      setPdfUploadMessage("Order wordt opgeslagen in Supabase...");
+      await saveOrderToSupabase(order);
+    } catch (err) {
+      console.error("Supabase opslaan fout:", err);
+      setPdfUploadMessage("");
+      setSearchError("PDF is gelezen, maar opslaan in Supabase lukt niet. Controleer Supabase RLS/policies of zet RLS tijdelijk uit voor de orders tabel.");
+      event.target.value = "";
+      return;
+    }
+
+    setUploadedPdfOrders((currentOrders) => {
+      const withoutSameOrder = currentOrders.filter((item) => item.id !== order.id);
+      return [...withoutSameOrder, order];
+    });
+
+    setSelectedPickerOrder(order);
+    setLastUploadedOrderId(order.id);
+    setPickerWeekStart(startOfWeek(getOrderDate(order)));
+    setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s). Kies eventueel direct een plandatum.`);
+    event.target.value = "";
   }
+
 
   function handleBrowserBack() {
     if (selectedModule === "Artikelzoeker" && pickerView === "pickbon") {
