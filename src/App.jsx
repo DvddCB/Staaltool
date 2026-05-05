@@ -1088,7 +1088,7 @@ export default function App() {
                       style={styles.smallDarkButton}
                       onClick={() => setPickerWeekStart(startOfWeek(new Date()))}
                     >
-                      Vandaag
+                      Deze week
                     </button>
                     <button
                       style={styles.smallLightButton}
@@ -2486,5 +2486,13 @@ const styles = {
     border: "2px solid #1234aa",
     borderRadius: 16,
     padding: 11
+  },
+  weekNav: {
+    display: "flex",
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "nowrap",
+    alignItems: "center",
+    justifyContent: "flex-end"
   },
 };
