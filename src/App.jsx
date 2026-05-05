@@ -190,6 +190,12 @@ function BarcodeView({ value }) {
   );
 }
 
+function getModuleDisplayName(moduleName) {
+  if (moduleName === "Artikelzoeker") return "Artikel Picker";
+  if (moduleName === "Artikel PICKER") return "Artikel Zoeker";
+  return moduleName;
+}
+
 export default function App() {
   const controlsRef = useRef(null);
   const scanLockRef = useRef(false);
@@ -691,13 +697,13 @@ export default function App() {
 
           <div style={styles.menuGrid}>
             <button style={styles.moduleButton} onClick={() => chooseModule("Artikelzoeker")}>
-              <span style={styles.moduleTitle}>Artikelzoeker</span>
-              <span style={styles.moduleText}>Artikelen zoeken of scannen</span>
+              <span style={styles.moduleTitle}>Artikel Picker</span>
+              <span style={styles.moduleText}>Pickbonnen scannen en verwerken</span>
             </button>
 
             <button style={styles.moduleButton} onClick={() => chooseModule("Artikel PICKER")}>
-              <span style={styles.moduleTitle}>Artikel PICKER</span>
-              <span style={styles.moduleText}>Artikelen samenstellen</span>
+              <span style={styles.moduleTitle}>Artikel Zoeker</span>
+              <span style={styles.moduleText}>Artikelen zoeken en direct de juiste code vinden</span>
             </button>
           </div>
 
@@ -716,7 +722,7 @@ export default function App() {
           <div style={styles.brandRow}>
             <img src="/logo.png" alt="logo" style={styles.headerLogo} />
             <div>
-              <h1 style={styles.headerTitle}>{selectedModule}</h1>
+              <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
               <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
             </div>
           </div>
