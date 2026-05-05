@@ -2675,11 +2675,6 @@ const styles = {
     padding: 16,
     boxShadow: "0 8px 24px rgba(15,23,42,0.10)"
   },
-  agendaPanel: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 14
-  },
   pickerPanelHeader: {
     display: "flex",
     alignItems: "flex-start",
@@ -2746,14 +2741,6 @@ const styles = {
     fontSize: 12,
     fontWeight: 900
   },
-  orderMeta: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 10,
-    color: "#64748b",
-    fontSize: 13,
-    marginTop: 12
-  },
   agendaToggle: {
     display: "flex",
     gap: 8
@@ -2766,25 +2753,6 @@ const styles = {
     padding: "10px 12px",
     fontWeight: 800,
     cursor: "pointer"
-  },
-  calendarGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-    gap: 10
-  },
-  calendarDay: {
-    minHeight: 210,
-    background: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: 16,
-    padding: 12
-  },
-  calendarDayActive: {
-    minHeight: 210,
-    background: "#eff6ff",
-    border: "1px solid #1234aa",
-    borderRadius: 16,
-    padding: 12
   },
   calendarDayHeader: {
     display: "flex",
@@ -2845,14 +2813,6 @@ const styles = {
     letterSpacing: 1,
     fontWeight: 900
   },
-  selectedOrderContent: {
-    display: "flex",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 14,
-    flexWrap: "wrap",
-    marginTop: 8
-  },
   selectedOrderTitle: {
     margin: 0,
     color: "white",
@@ -2869,26 +2829,10 @@ const styles = {
     color: "#dbeafe",
     fontSize: 14
   },
-  openPickbonButton: {
-    border: "none",
-    borderRadius: 14,
-    background: "#ff7a00",
-    color: "white",
-    padding: "14px 18px",
-    fontWeight: 900,
-    cursor: "pointer",
-    fontSize: 16
-  },
   pickerBackRow: {
     display: "flex",
     gap: 8,
     flexWrap: "wrap"
-  },
-  pickerHomePage: {
-    display: "grid",
-    gridTemplateColumns: "1.05fr 1fr",
-    gap: 14,
-    alignItems: "start"
   },
   orderSearchInput: {
     width: "100%",
@@ -2898,23 +2842,6 @@ const styles = {
     borderRadius: 12,
     padding: 12,
     fontSize: 16
-  },
-  orderSplitGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: 14
-  },
-  todoOrdersPanel: {
-    background: "#fef9c3",
-    border: "1px solid #fde047",
-    borderRadius: 18,
-    padding: 14
-  },
-  doneOrdersPanel: {
-    background: "#dcfce7",
-    border: "1px solid #86efac",
-    borderRadius: 18,
-    padding: 14
   },
   orderColumnHeader: {
     display: "flex",
@@ -3015,12 +2942,6 @@ const styles = {
     fontWeight: 900,
     width: "fit-content"
   },
-  pickerHomePage: {
-    display: "grid",
-    gridTemplateColumns: "1.15fr 1fr",
-    gap: 14,
-    alignItems: "stretch"
-  },
   orderSplitGrid: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
@@ -3051,17 +2972,6 @@ const styles = {
     margin: "5px 0 0",
     color: "#64748b",
     fontWeight: 800
-  },
-  weekNav: {
-    display: "flex",
-    gap: 8,
-    flexWrap: "wrap",
-    justifyContent: "flex-end"
-  },
-  calendarGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
-    gap: 10
   },
   calendarDay: {
     minHeight: 250,
@@ -3394,5 +3304,5 @@ const styles = {
     borderRadius: 12,
     padding: 10,
     fontWeight: 800
-  },
+  }
 };
