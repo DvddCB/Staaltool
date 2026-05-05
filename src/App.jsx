@@ -513,9 +513,9 @@ export default function App() {
       }
     : selectedPickerOrder;
   const allPickbonLinesProcessed = pickbonLines.length > 0 && pickbonLines.every((line) => {
-    const orderedQuantity = Number(line.quantity || 1);
-    const scannedQuantity = line.scannedQuantity !== undefined ? Number(line.scannedQuantity || 0) : orderedQuantity;
-    return line.processed && scannedQuantity >= orderedQuantity;
+    const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
+    const pickedQuantity = Number(line.scannedQuantity || 0);
+    return line.processed && pickedQuantity >= requestedQuantity;
   });
 
   const lengthNumber = Number(lengthMm);
@@ -849,15 +849,15 @@ export default function App() {
       currentLines.map((line) => {
         if (line.id !== lineId) return line;
 
-        const maxQuantity = Number(line.originalQuantity || line.quantity || 1);
+        const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
         const value = Math.max(1, Number(nextQuantity) || 1);
-        const safeQuantity = Math.min(value, maxQuantity);
-        const scannedQuantity = Number(line.scannedQuantity || 0);
+        const safeQuantity = Math.min(value, requestedQuantity);
+        const pickedQuantity = Number(line.scannedQuantity || 0);
 
         return {
           ...line,
           quantity: safeQuantity,
-          processed: scannedQuantity >= safeQuantity
+          processed: pickedQuantity >= requestedQuantity
         };
       })
     );
@@ -882,15 +882,14 @@ export default function App() {
       currentLines.map((line) => {
         if (line.id !== confirmLineId) return line;
 
-        const orderedQuantity = Number(line.quantity || 1);
-        const currentScanned = Number(line.scannedQuantity || 0);
-        const nextScanned = Math.min(currentScanned + 1, orderedQuantity);
-        const hasQuantityTracking = line.scannedQuantity !== undefined;
+        const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
+        const chosenPickedQuantity = Number(line.quantity || 1);
+        const pickedQuantity = Math.min(chosenPickedQuantity, requestedQuantity);
 
         return {
           ...line,
-          scannedQuantity: hasQuantityTracking ? nextScanned : line.scannedQuantity,
-          processed: hasQuantityTracking ? nextScanned >= orderedQuantity : true,
+          scannedQuantity: line.scannedQuantity !== undefined ? pickedQuantity : line.scannedQuantity,
+          processed: pickedQuantity >= requestedQuantity,
           scannedAt: new Date().toLocaleString("nl-NL")
         };
       })
@@ -1612,12 +1611,12 @@ export default function App() {
                         <div style={styles.pickbonLineMain}>
                           <strong>{line.description}</strong>
                           <span style={line.processed ? styles.lineProgressDone : styles.lineProgressOpen}>
-                            {Number(line.scannedQuantity || 0)} / {Number(line.quantity || 1)} gepickt
+                            {Number(line.scannedQuantity || 0)} / {Number(line.originalQuantity || line.quantity || 1)} gepickt
                           </span>
                           <span style={styles.pickbonCode}>{line.articleCode}</span>
                           {line.scannedQuantity !== undefined && (
                             <span style={line.processed ? styles.pickbonDoneText : styles.pickbonTodoText}>
-                              {line.processed ? "✓ Verwerkt" : `Nog te verwerken: ${Number(line.quantity || 0) - Number(line.scannedQuantity || 0)}`}
+                              {line.processed ? "✓ Verwerkt" : `Nog te verwerken: ${Number(line.originalQuantity || line.quantity || 0) - Number(line.scannedQuantity || 0)}`}
                             </span>
                           )}
                           {line.scannedQuantity !== undefined && (
@@ -1639,9 +1638,12 @@ export default function App() {
                               value={line.quantity}
                               onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                             />
+                            <span style={styles.qtyMaxText}>
+                              gevraagd: {line.originalQuantity || line.quantity}
+                            </span>
                           </div>
 
-                          {!line.processed && Number(line.scannedQuantity || 0) < Number(line.quantity || 1) && (
+                          {!line.processed && Number(line.scannedQuantity || 0) < Number(line.originalQuantity || line.quantity || 1) && (
                             <button style={styles.smallScanButton} onClick={startScanner}>
                               Scan
                             </button>
@@ -1651,7 +1653,7 @@ export default function App() {
                             <button style={styles.smallDoneButton} onClick={() => togglePickbonProcessed(line.id)}>
                               ✓ Verwerkt
                             </button>
-                          ) : Number(line.scannedQuantity || 0) < Number(line.quantity || 1) ? (
+                          ) : Number(line.scannedQuantity || 0) < Number(line.originalQuantity || line.quantity || 1) ? (
                             <button style={styles.smallDarkButton} onClick={() => requestProcessLine(line.id)}>
                               Verwerken
                             </button>
@@ -3156,5 +3158,10 @@ const styles = {
     padding: "5px 9px",
     fontSize: 13,
     fontWeight: 900
+  },
+  qtyMaxText: {
+    color: "#64748b",
+    fontSize: 11,
+    fontWeight: 800
   },
 };
