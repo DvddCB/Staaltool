@@ -522,34 +522,37 @@ function extractLogic4CustomerName(rawText, cleanText) {
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const voorIndex = lines.findIndex((line) => /^Voor\s*:?\s*$/i.test(line) || /^Voor\s*:/i.test(line));
+  // Logic4 zet de klantnaam direct onder of achter "Voor:".
+  // We nemen bewust alleen de eerste bruikbare regel, niet het hele adresblok.
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
 
-  if (voorIndex >= 0) {
-    const sameLineMatch = lines[voorIndex].match(/^Voor\s*:\s*(.+)$/i);
+    const sameLineMatch = line.match(/^Voor\s*:\s*(.+)$/i);
     if (sameLineMatch?.[1]?.trim()) {
       return sameLineMatch[1].trim();
     }
 
-    const nextUsefulLine = lines
-      .slice(voorIndex + 1, voorIndex + 7)
-      .find((line) =>
-        line &&
-        !/^(Pickbon|Klantnummer|Verzenddatum|Ordernummer|Orderdatum|Orderstatus|Referentie|Art\.?nr|Omschrijving)$/i.test(line) &&
-        !/^\d{4,}$/.test(line) &&
-        !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(line)
-      );
+    if (/^Voor\s*:?\s*$/i.test(line)) {
+      const nextLine = lines[index + 1]?.trim() || "";
 
-    if (nextUsefulLine) {
-      return nextUsefulLine.trim();
+      if (
+        nextLine &&
+        !/^(Pickbon|Klantnummer|Verzenddatum|Ordernummer|Orderdatum|Orderstatus|Referentie|Art\.?nr|Omschrijving)$/i.test(nextLine) &&
+        !/^\d{4,}$/.test(nextLine) &&
+        !/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(nextLine)
+      ) {
+        return nextLine;
+      }
     }
   }
 
-  const cleanMatch = String(cleanText || "").match(/Voor\s*:\s*([A-Za-zÀ-ÿ0-9 .,&'-]{3,60})/i);
-  if (cleanMatch?.[1]) {
-    return cleanMatch[1].trim();
-  }
+  // Fallback voor tekst die door OCR op 1 regel is gezet:
+  // pak alleen tot aan het volgende bekende veld.
+  const fallbackMatch = String(cleanText || "").match(
+    /Voor\s*:\s*(.*?)(?:\s+Klantnummer|\s+Verzenddatum|\s+Ordernummer|\s+Orderdatum|\s+Orderstatus|\s+Referentie|\s+Art\.?nr|\s+Omschrijving|$)/i
+  );
 
-  return "";
+  return fallbackMatch?.[1]?.trim() || "";
 }
 
 function parseLogic4PickbonTextToOrder(text, fileName) {
