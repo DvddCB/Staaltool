@@ -410,6 +410,7 @@ export default function App() {
   const [pickerView, setPickerView] = useState("home");
   const [selectedPickerOrder, setSelectedPickerOrder] = useState(() => getDemoOrdersWithDates()[1]);
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
+  const [pickerOrderPage, setPickerOrderPage] = useState(1);
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
 
   const [username, setUsername] = useState("");
@@ -446,10 +447,20 @@ export default function App() {
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
   const datedPickerOrders = getDemoOrdersWithDates();
-  const visiblePickerOrders = datedPickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
-  const filteredVisiblePickerOrders = visiblePickerOrders.filter((order) =>
+  const allPickerOrdersSorted = datedPickerOrders
+    .slice()
+    .sort((a, b) => getOrderDate(a) - getOrderDate(b) || String(a.tijd).localeCompare(String(b.tijd)));
+  const allFilteredPickerOrders = allPickerOrdersSorted.filter((order) =>
     (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
   );
+  const ordersPerPage = 6;
+  const pickerOrderPageCount = Math.max(1, Math.ceil(allFilteredPickerOrders.length / ordersPerPage));
+  const safePickerOrderPage = Math.min(pickerOrderPage, pickerOrderPageCount);
+  const pagedPickerOrders = allFilteredPickerOrders.slice(
+    (safePickerOrderPage - 1) * ordersPerPage,
+    safePickerOrderPage * ordersPerPage
+  );
+  const visiblePickerOrders = datedPickerOrders.filter((order) => isOrderInWeek(order, pickerWeekStart));
   const oldestOpenOrderOutsideWeek = datedPickerOrders
     .filter((order) => isOrderOpen(order) && !isOrderInWeek(order, pickerWeekStart))
     .sort((a, b) => getOrderDate(a) - getOrderDate(b))[0];
@@ -1017,93 +1028,79 @@ export default function App() {
                 <input
                   style={styles.orderSearchInput}
                   value={pickerOrderQuery}
-                  onChange={(e) => setPickerOrderQuery(e.target.value)}
+                  onChange={(e) => {
+                  setPickerOrderQuery(e.target.value);
+                  setPickerOrderPage(1);
+                }}
                   placeholder="Zoek order of klant..."
                 />
               </div>
 
-              <div style={styles.orderSplitGrid}>
-                <div style={styles.todoOrdersPanel}>
-                  <div style={styles.orderColumnHeader}>
-                    <h3 style={styles.orderColumnTitle}>Nog te doen</h3>
-                    <span style={styles.todoBadge}>
-                      {
-                        filteredVisiblePickerOrders.filter((order) => order.status !== "Gereed").length
-                      }
-                    </span>
-                  </div>
-
-                  <div style={styles.orderList}>
-                    {filteredVisiblePickerOrders
-                      .filter((order) => order.status !== "Gereed")
-                      .map((order) => (
-                        <button
-                          key={order.id}
-                          style={
-                            selectedPickerOrder?.id === order.id
-                              ? styles.todoOrderCardActive
-                              : styles.todoOrderCard
-                          }
-                          onClick={() => setSelectedPickerOrder(order)}
-                        >
-                          <div style={styles.orderCardTop}>
-                            <div>
-                              <p style={styles.orderNumber}>{order.id}</p>
-                              <p style={styles.orderCustomer}>{order.klant}</p>
-                            </div>
-                            <span style={styles.todoStatus}>Nog doen</span>
-                          </div>
-
-                          <div style={styles.orderMeta}>
-                            <span>{order.tijd}</span>
-                            <span>{formatDutchDate(getOrderDate(order))}</span>
-                            <span>{order.regels} regels</span>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
+              <div style={styles.allOrdersPanel}>
+                <div style={styles.orderColumnHeader}>
+                  <h3 style={styles.orderColumnTitle}>Alle orders</h3>
+                  <span style={styles.orderCountBadge}>
+                    {allFilteredPickerOrders.length}
+                  </span>
                 </div>
 
-                <div style={styles.doneOrdersPanel}>
-                  <div style={styles.orderColumnHeader}>
-                    <h3 style={styles.orderColumnTitle}>Verwerkt</h3>
-                    <span style={styles.doneBadge}>
-                      {
-                        filteredVisiblePickerOrders.filter((order) => order.status === "Gereed").length
+                <div style={styles.orderList}>
+                  {pagedPickerOrders.map((order) => (
+                    <button
+                      key={order.id}
+                      style={
+                        selectedPickerOrder?.id === order.id
+                          ? order.status === "Gereed"
+                            ? styles.doneOrderCardActive
+                            : styles.todoOrderCardActive
+                          : order.status === "Gereed"
+                            ? styles.doneOrderCard
+                            : styles.todoOrderCard
                       }
-                    </span>
-                  </div>
+                      onClick={() => setSelectedPickerOrder(order)}
+                    >
+                      <div style={styles.orderCardTop}>
+                        <div>
+                          <p style={styles.orderNumber}>{order.id}</p>
+                          <p style={styles.orderCustomer}>{order.klant}</p>
+                        </div>
+                        <span style={order.status === "Gereed" ? styles.doneStatus : styles.todoStatus}>
+                          {order.status === "Gereed" ? "✓ Verwerkt" : "Nog doen"}
+                        </span>
+                      </div>
 
-                  <div style={styles.orderList}>
-                    {filteredVisiblePickerOrders
-                      .filter((order) => order.status === "Gereed")
-                      .map((order) => (
-                        <button
-                          key={order.id}
-                          style={
-                            selectedPickerOrder?.id === order.id
-                              ? styles.doneOrderCardActive
-                              : styles.doneOrderCard
-                          }
-                          onClick={() => setSelectedPickerOrder(order)}
-                        >
-                          <div style={styles.orderCardTop}>
-                            <div>
-                              <p style={styles.orderNumber}>{order.id}</p>
-                              <p style={styles.orderCustomer}>{order.klant}</p>
-                            </div>
-                            <span style={styles.doneStatus}>✓ Verwerkt</span>
-                          </div>
-
-                          <div style={styles.orderMeta}>
-                            <span>{order.tijd}</span>
-                            <span>{formatDutchDate(getOrderDate(order))}</span>
-                            <span>{order.regels} regels</span>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
+                      <div style={styles.orderMeta}>
+                        <span>{formatDutchDate(getOrderDate(order))}</span>
+                        <span>{order.tijd}</span>
+                        <span>{order.regels} regels</span>
+                      </div>
+                    </button>
+                  ))}
                 </div>
+
+                {pickerOrderPageCount > 1 && (
+                  <div style={styles.paginationRow}>
+                    <button
+                      style={styles.smallLightButton}
+                      disabled={safePickerOrderPage <= 1}
+                      onClick={() => setPickerOrderPage((page) => Math.max(1, page - 1))}
+                    >
+                      Vorige
+                    </button>
+
+                    <span style={styles.paginationText}>
+                      Pagina {safePickerOrderPage} van {pickerOrderPageCount}
+                    </span>
+
+                    <button
+                      style={styles.smallLightButton}
+                      disabled={safePickerOrderPage >= pickerOrderPageCount}
+                      onClick={() => setPickerOrderPage((page) => Math.min(pickerOrderPageCount, page + 1))}
+                    >
+                      Volgende
+                    </button>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -2574,5 +2571,25 @@ const styles = {
     padding: "10px 12px",
     fontWeight: 900,
     cursor: "pointer"
+  },
+  allOrdersPanel: {
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  paginationRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 14,
+    flexWrap: "wrap"
+  },
+  paginationText: {
+    color: "#475569",
+    fontWeight: 900,
+    fontSize: 13
   },
 };
