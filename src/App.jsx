@@ -315,6 +315,11 @@ function toIsoDate(date) {
 
 function getDemoOrdersWithDates() {
   const today = new Date();
+
+  const isAdmin = userRole === "admin";
+  const canUploadPdf = isAdmin;
+  const canEditDates = isAdmin;
+  const canRemoveOrders = isAdmin;
   const thisWeek = startOfWeek(today);
   const previousWeek = addWeeks(thisWeek, -1);
   const nextWeek = addWeeks(thisWeek, 1);
@@ -711,7 +716,6 @@ export default function App() {
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
-
   const today = new Date();
 
   const effectivePickerOrders = useMemo(() => {
@@ -783,10 +787,6 @@ export default function App() {
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
   const articleCode = lengthIsValid ? getArticleCode(type, size, lengthMm, colorCode) : "";
-  const isAdmin = userRole === "admin";
-  const canUploadPdf = isAdmin;
-  const canEditDates = isAdmin;
-  const canRemoveOrders = isAdmin;
 
   useEffect(() => {
     localStorage.setItem("staaltoolProcessedOrderIds", JSON.stringify(processedOrderIds));
