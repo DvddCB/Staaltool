@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
 
-const SUPABASE_URL = "https://wfwrjcbakalyshtvxa.supabase.co";
+const SUPABASE_URL = "https://wfwrjicbakalyhshtvxa.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indmd3JqaWNiYWthbHloc2h0dnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5ODY0MTksImV4cCI6MjA5MzU2MjQxOX0.4g9uwqCA3OmFr6CK7M_iYEsZlqxXKQlqBYu783Xv9uE";
 const SUPABASE_ORDERS_ENDPOINT = `${SUPABASE_URL}/rest/v1/orders`;
 
@@ -19,7 +19,7 @@ async function supabaseRequest(path = "", options = {}) {
 
   if (!response.ok) {
     const message = await response.text();
-    throw new Error(message || "Supabase aanvraag mislukt.");
+    throw new Error(`Supabase fout ${response.status}: ${message || response.statusText}`);
   }
 
   if (response.status === 204) return null;
@@ -979,7 +979,7 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setSearchError("Orders konden niet uit Supabase worden geladen. Controleer Supabase of RLS/policies.");
+      setSearchError("Orders konden niet uit Supabase worden geladen: " + err.message);
     } finally {
       setOrdersLoading(false);
     }
@@ -1040,7 +1040,7 @@ export default function App() {
     } catch (err) {
       console.error("Supabase opslaan fout:", err);
       setPdfUploadMessage("");
-      setSearchError("PDF/order is gemaakt, maar opslaan in Supabase lukt niet. Controleer API key, tabelkolommen of Supabase rechten.");
+      setSearchError("PDF/order is gemaakt, maar opslaan in Supabase lukt niet: " + err.message);
       event.target.value = "";
       return;
     }
