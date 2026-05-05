@@ -514,76 +514,26 @@ function parseDutchPdfDate(text) {
 }
 
 
-function buildLogic4ArticleCodeCandidates(lines) {
-  const candidates = [];
-
-  lines.forEach((line, index) => {
-    const currentDigits = (line.match(/\d+/g) || []).join("");
-    const nextDigits = ((lines[index + 1] || "").match(/\d+/g) || []).join("");
-    const combinedWithNext = currentDigits + nextDigits;
-
-    // Normale codes op 1 regel
-    (line.match(/\b\d{12,24}\b/g) || []).forEach((code) => {
-      candidates.push({
-        code,
-        lineIndex: index,
-        sourceLine: line
-      });
-    });
-
-    // Logic4 breekt artikelnummer soms af over 2 regels:
-    // 24010110096300 + 091 = 24010110096300091
-    if (currentDigits.length >= 12 && currentDigits.length <= 16 && nextDigits.length >= 1 && nextDigits.length <= 6) {
-      candidates.push({
-        code: combinedWithNext,
-        lineIndex: index,
-        sourceLine: `${line} ${lines[index + 1] || ""}`
-      });
-    }
-
-    // Extra fallback: alle cijfers in 2 regels samen zoeken
-    if (combinedWithNext.length >= 15 && combinedWithNext.length <= 24) {
-      candidates.push({
-        code: combinedWithNext,
-        lineIndex: index,
-        sourceLine: `${line} ${lines[index + 1] || ""}`
-      });
-    }
-  });
-
-  return candidates;
-}
-
-function getLogic4QuantityFromLines(lines, lineIndex, fallback = 1) {
-  const windowText = [
-    lines[lineIndex] || "",
-    lines[lineIndex + 1] || "",
-    lines[lineIndex + 2] || ""
-  ].join(" ");
-
-  const numbers = (windowText.match(/\b\d+\b/g) || [])
-    .map((value) => Number(value))
-    .filter((value) => value >= 0 && value <= 999);
-
-  // In jullie pickbon staan rechts meestal:
-  // Nog te leveren / Gereserveerd / Reeds gepickt / Nu te picken
-  // "Nu te picken" is de laatste kleine waarde.
-  const positiveNumbers = numbers.filter((value) => value > 0);
-
-  return positiveNumbers.length ? positiveNumbers[positiveNumbers.length - 1] : fallback;
-}
 
 function parseLogic4PickbonTextToOrder(text, fileName) {
-  const cleanText = normalizeOcrText(text);
-  const lines = String(text || "")
+  const rawText = String(text || "");
+  const cleanText = normalizeOcrText(rawText);
+
+  const lines = rawText
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
-  const pickbonMatch = cleanText.match(/Pickbon\s+(\d{3,})/i);
+  const joinedLines = lines.join(" ");
+
+  const pickbonMatch =
+    cleanText.match(/Pickbon\s+(\d{3,})/i) ||
+    cleanText.match(/\bPickbon\b[^0-9]{0,20}(\d{3,})/i);
+
   const orderMatch =
     cleanText.match(/Ordernummer[:\s]+(\d{3,})/i) ||
-    cleanText.match(/\b(30\d{5,})\b/);
+    cleanText.match(/\b(30\d{5,})\b/) ||
+    fileName.match(/(\d{5,})/);
 
   const klantMatch =
     cleanText.match(/Klantnummer[:\s]+(\d{2,})/i) ||
@@ -595,19 +545,17 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
 
   const articleRows = [];
   const seenCodes = new Set();
-  const candidates = buildLogic4ArticleCodeCandidates(lines);
 
-  candidates.forEach((candidate) => {
-    const rawCode = String(candidate.code || "").replace(/\D/g, "");
-    if (seenCodes.has(rawCode)) return;
+  function addArticleRow(rawCode, quantity, sourceText = "") {
+    const code = String(rawCode || "").replace(/\D/g, "");
+    if (!code || seenCodes.has(code)) return false;
 
-    const parsed = parseArticleCode(rawCode);
-    if (!parsed) return;
+    const parsed = parseArticleCode(code);
+    if (!parsed) return false;
 
-    seenCodes.add(rawCode);
+    seenCodes.add(code);
 
-    const quantity = getLogic4QuantityFromLines(lines, candidate.lineIndex, 1);
-    const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || rawCode;
+    const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || code;
 
     articleRows.push({
       articleCode,
@@ -617,9 +565,77 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
       length: parsed.length,
       colorCode: parsed.colorCode,
       colorName: parsed.colorName,
-      quantity
+      quantity: Math.max(1, Number(quantity || 1)),
+      pdfSourceText: sourceText
     });
+
+    return true;
+  }
+
+  // 1. Beste herkenning voor jullie Logic4 layout:
+  // Art.nr staat soms als 14 cijfers op regel 1 en laatste 3 cijfers op regel 2.
+  // Omschrijving en aantallen staan in de regels erna.
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    const nextLine = lines[index + 1] || "";
+    const next2Line = lines[index + 2] || "";
+    const next3Line = lines[index + 3] || "";
+    const windowText = [line, nextLine, next2Line, next3Line].join(" ").replace(/\s+/g, " ");
+
+    const baseMatch = line.match(/\b(\d{12,16})\b/);
+    const suffixMatch = nextLine.match(/^\s*(\d{1,6})\s*$/);
+
+    if (baseMatch && suffixMatch) {
+      const combinedCode = `${baseMatch[1]}${suffixMatch[1]}`;
+      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
+      const smallNumbers = qtyNumbers
+        .map((value) => Number(value))
+        .filter((value) => value > 0 && value <= 99);
+
+      // Laatste kleine getal is meestal "Nu te picken".
+      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+      addArticleRow(combinedCode, quantity, windowText);
+    }
+  }
+
+  // 2. Fallback: zoek alle volledige codes in samengevoegde tekst.
+  const compactText = joinedLines.replace(/\s+/g, " ");
+  const fullCodes = compactText.match(/\b\d{15,24}\b/g) || [];
+
+  fullCodes.forEach((code) => {
+    if (seenCodes.has(code)) return;
+
+    const codeIndex = compactText.indexOf(code);
+    const sourceWindow = compactText.slice(codeIndex, codeIndex + 180);
+    const numbersAfterCode = sourceWindow
+      .slice(code.length)
+      .match(/\b\d+\b/g) || [];
+
+    const smallNumbers = numbersAfterCode
+      .map((value) => Number(value))
+      .filter((value) => value > 0 && value <= 99);
+
+    const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+    addArticleRow(code, quantity, sourceWindow);
   });
+
+  // 3. Laatste fallback speciaal voor deze pickbon:
+  // OCR kan de code splitsen of spaties zetten. Zoek "240..." + losse cijfers erachter in de buurt.
+  for (let index = 0; index < lines.length; index++) {
+    const windowText = lines.slice(index, index + 4).join(" ").replace(/\s+/g, " ");
+    const looseMatch = windowText.match(/\b(24\d{10,14})\D+(\d{1,6})\b/);
+
+    if (looseMatch) {
+      const combinedCode = `${looseMatch[1]}${looseMatch[2]}`;
+      const qtyNumbers = windowText.match(/\b\d+\b/g) || [];
+      const smallNumbers = qtyNumbers
+        .map((value) => Number(value))
+        .filter((value) => value > 0 && value <= 99);
+
+      const quantity = smallNumbers.length ? smallNumbers[smallNumbers.length - 1] : 1;
+      addArticleRow(combinedCode, quantity, windowText);
+    }
+  }
 
   const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
   const orderId = orderMatch?.[1] || fallbackId;
@@ -635,7 +651,8 @@ function parseLogic4PickbonTextToOrder(text, fileName) {
     kleur: "#eab308",
     plannedDate: orderDate ? parseDutchPdfDate(orderDate) : parseDutchPdfDate(cleanText),
     rows: articleRows,
-    source: "PDF"
+    source: "PDF",
+    rawPdfText: rawText
   };
 }
 
@@ -665,7 +682,7 @@ async function readPdfTextWithOcr(pdf) {
 
   for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
     const page = await pdf.getPage(pageNumber);
-    const viewport = page.getViewport({ scale: 2.2 });
+    const viewport = page.getViewport({ scale: 3 });
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
 
@@ -833,8 +850,9 @@ export default function App() {
       }
 
       if (!order.rows.length) {
+        console.log("PDF tekst/OCR tekst:", fullText);
         setPdfUploadMessage("");
-        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Controleer of de artikelcodes goed zichtbaar zijn.");
+        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Open de browser-console om de OCR tekst te controleren.");
         event.target.value = "";
         return;
       }
