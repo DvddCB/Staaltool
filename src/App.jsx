@@ -372,11 +372,6 @@ function toIsoDate(date) {
 function getDemoOrdersWithDates() {
   const today = new Date();
 
-  const isAdmin = userRole === "admin";
-  const canUploadPdf = isAdmin;
-  const canEditDates = isAdmin;
-  const canRemoveOrders = isAdmin;
-
   const thisWeek = startOfWeek(today);
   const previousWeek = addWeeks(thisWeek, -1);
   const nextWeek = addWeeks(thisWeek, 1);
@@ -855,6 +850,11 @@ export default function App() {
   const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
+
+  const isAdmin = userRole === "admin";
+  const canUploadPdf = isAdmin;
+  const canEditDates = isAdmin;
+  const canRemoveOrders = isAdmin;
 
   const effectivePickerOrders = useMemo(() => {
     return uploadedPdfOrders.map((order) => ({
@@ -2001,7 +2001,7 @@ export default function App() {
                       {canRemoveOrders && <div style={styles.orderCardActions}>
                         <button
                           type="button"
-                          style={styles.removeOrderButton}
+                          style={canRemoveOrders ? styles.removeOrderButton : { ...styles.removeOrderButton, display: "none" }}
                           onClick={(event) => {
                             event.stopPropagation();
                             requestRemoveOrder(order.id);
@@ -2111,7 +2111,7 @@ export default function App() {
                   <div style={styles.selectedOrderButtons}>
                     <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
                     {canRemoveOrders && (
-                      <button style={styles.removeSelectedOrderButton} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
+                      <button style={canRemoveOrders ? styles.removeSelectedOrderButton : { ...styles.removeSelectedOrderButton, display: "none" }} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
                     )}
                   </div>
                 </div>
