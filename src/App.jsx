@@ -1181,7 +1181,8 @@ export default function App() {
                             ? styles.doneOrderCard
                             : styles.todoOrderCard
                       }
-                      onClick={() => openPickerOrder(order)}
+                      onClick={() => setSelectedPickerOrder(order)}
+                      onDoubleClick={() => openPickerOrder(order)}
                     >
                       <div style={styles.orderCardTop}>
                         <div>
@@ -1196,8 +1197,9 @@ export default function App() {
                       <div style={styles.orderMeta}>
                         <span>{formatDutchDate(getOrderDate(order))}</span>
                         <span>{order.tijd}</span>
-                        <span>{getOrderProgress(order).done} gedaan</span>
-                        <span>{getOrderProgress(order).open} open</span>
+                        <span style={styles.orderProgressText}>
+                          <strong>{getOrderProgress(order).done}</strong> gedaan · <strong>{getOrderProgress(order).open}</strong> open
+                        </span>
                       </div>
 
                       <div style={styles.orderProgressBar}>
@@ -2778,5 +2780,10 @@ const styles = {
     height: "100%",
     background: "#16a34a",
     borderRadius: 999
+  },
+  orderProgressText: {
+    whiteSpace: "nowrap",
+    fontWeight: 800,
+    color: "#334155"
   },
 };
