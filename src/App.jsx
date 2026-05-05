@@ -449,7 +449,12 @@ export default function App() {
   const datedPickerOrders = getDemoOrdersWithDates();
   const allPickerOrdersSorted = datedPickerOrders
     .slice()
-    .sort((a, b) => getOrderDate(a) - getOrderDate(b) || String(a.tijd).localeCompare(String(b.tijd)));
+    .sort((a, b) => {
+      const statusSort = Number(a.status === "Gereed") - Number(b.status === "Gereed");
+      if (statusSort !== 0) return statusSort;
+
+      return getOrderDate(a) - getOrderDate(b) || String(a.tijd).localeCompare(String(b.tijd));
+    });
   const allFilteredPickerOrders = allPickerOrdersSorted.filter((order) =>
     (order.id + " " + order.klant).toLowerCase().includes(pickerOrderQuery.toLowerCase())
   );
@@ -977,9 +982,82 @@ export default function App() {
 
   return (
     <div style={styles.appPage}>
+      <style>{`
+        @media (max-width: 980px) {
+          .picker-home-responsive {
+            grid-template-columns: 1fr !important;
+          }
+
+          .calendar-grid-responsive {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .app-header-responsive {
+            align-items: stretch !important;
+          }
+
+          .app-brand-responsive {
+            width: 100% !important;
+          }
+
+          .app-actions-responsive {
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          .app-actions-responsive button {
+            width: 100% !important;
+          }
+
+          .picker-home-responsive {
+            grid-template-columns: 1fr !important;
+            gap: 10px !important;
+          }
+
+          .calendar-grid-responsive {
+            grid-template-columns: 1fr !important;
+          }
+
+          .week-nav-responsive {
+            width: 100% !important;
+            justify-content: stretch !important;
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+          }
+
+          .week-nav-responsive button {
+            width: 100% !important;
+          }
+
+          .selected-order-responsive {
+            align-items: stretch !important;
+          }
+
+          .selected-order-responsive button {
+            width: 100% !important;
+          }
+
+          .pickbon-line-responsive {
+            flex-direction: column !important;
+          }
+
+          .pickbon-controls-responsive {
+            width: 100% !important;
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+          }
+
+          .pickbon-controls-responsive input {
+            width: 100% !important;
+          }
+        }
+      `}</style>
       <div style={styles.appShell}>
-        <header style={styles.header}>
-          <div style={styles.brandRow}>
+        <header style={styles.header} className="app-header-responsive">
+          <div style={styles.brandRow} className="app-brand-responsive">
             <img src="/logo.png" alt="logo" style={styles.headerLogo} />
             <div>
               <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
@@ -987,7 +1065,7 @@ export default function App() {
             </div>
           </div>
 
-          <div style={styles.headerActions}>
+          <div style={styles.headerActions} className="app-actions-responsive">
             <button style={styles.menuButtonSmall} onClick={goToMenu}>Menu</button>
             <button style={styles.scanButton} onClick={startScanner}>Scan barcode</button>
             <button style={styles.logoutButton} onClick={logout}>Uitloggen</button>
@@ -1017,7 +1095,7 @@ export default function App() {
         {searchError && <div style={styles.scanError}>{searchError}</div>}
 
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
-          <section style={styles.pickerHomePage}>
+          <section style={styles.pickerHomePage} className="picker-home-responsive">
             <section style={styles.panel}>
               <div style={styles.pickerPanelHeader}>
                 <div>
@@ -1113,7 +1191,7 @@ export default function App() {
                     <p style={styles.weekLabel}>{formatWeekLabel(pickerWeekStart)}</p>
                   </div>
 
-                  <div style={styles.weekNav}>
+                  <div style={styles.weekNav} className="week-nav-responsive">
                     <button
                       style={styles.smallLightButton}
                       onClick={() => setPickerWeekStart((current) => addWeeks(current, -1))}
@@ -1153,7 +1231,7 @@ export default function App() {
                   </div>
                 )}
 
-                <div style={styles.calendarGrid}>
+                <div style={styles.calendarGrid} className="calendar-grid-responsive">
                   {pickerWeekDays.map((day, index) => {
                     const isToday = isSameDate(day.date, today);
                     const showOrders = isToday || index === 0;
@@ -1197,7 +1275,7 @@ export default function App() {
 
               <section style={styles.selectedOrderPanel}>
                 <p style={styles.selectedOrderLabel}>Geselecteerde order</p>
-                <div style={styles.selectedOrderContent}>
+                <div style={styles.selectedOrderContent} className="selected-order-responsive">
                   <div>
                     <h2 style={styles.selectedOrderTitle}>{selectedPickerOrder?.id}</h2>
                     <p style={styles.selectedOrderCustomer}>{selectedPickerOrder?.klant}</p>
@@ -1288,7 +1366,7 @@ export default function App() {
                 ) : (
                   <div style={styles.pickbonList}>
                     {pickbonLines.map((line) => (
-                      <div key={line.id} style={line.processed ? styles.pickbonLineDone : styles.pickbonLine}>
+                      <div key={line.id} style={line.processed ? styles.pickbonLineDone : styles.pickbonLine} className="pickbon-line-responsive">
                         <div style={styles.pickbonLineMain}>
                           <strong>{line.description}</strong>
                           <span style={styles.pickbonCode}>{line.articleCode}</span>
@@ -1305,7 +1383,7 @@ export default function App() {
                           <span style={styles.pickbonMeta}>Laatst gescand: {line.scannedAt}</span>
                         </div>
 
-                        <div style={styles.pickbonLineControls}>
+                        <div style={styles.pickbonLineControls} className="pickbon-controls-responsive">
                           <label style={styles.qtyLabel}>Aantal</label>
                           <input
                             style={styles.qtyInput}
@@ -2591,5 +2669,43 @@ const styles = {
     color: "#475569",
     fontWeight: 900,
     fontSize: 13
+  },
+  pickerHomePage: {
+    display: "grid",
+    gridTemplateColumns: "1.15fr 1fr",
+    gap: 14,
+    alignItems: "stretch"
+  },
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 10
+  },
+  orderMeta: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 10,
+    color: "#64748b",
+    fontSize: 13,
+    marginTop: 12,
+    flexWrap: "wrap"
+  },
+  selectedOrderContent: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 14,
+    flexWrap: "wrap",
+    marginTop: 8
+  },
+  openPickbonButton: {
+    border: "none",
+    borderRadius: 14,
+    background: "#ff7a00",
+    color: "white",
+    padding: "14px 18px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
   },
 };
