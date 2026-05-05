@@ -766,6 +766,13 @@ export default function App() {
       return [];
     }
   });
+  const [hiddenDemoOrderIds, setHiddenDemoOrderIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("staaltoolHiddenDemoOrderIds") || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [pdfUploadMessage, setPdfUploadMessage] = useState("");
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
   const [confirmRemoveOrderId, setConfirmRemoveOrderId] = useState(null);
@@ -811,7 +818,10 @@ export default function App() {
   );
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
-  const datedPickerOrders = [...getDemoOrdersWithDates(), ...uploadedPdfOrders];
+  const datedPickerOrders = [
+    ...getDemoOrdersWithDates().filter((order) => !hiddenDemoOrderIds.includes(order.id)),
+    ...uploadedPdfOrders
+  ];
   const effectivePickerOrders = datedPickerOrders.map((order) => ({
     ...order,
     status: processedOrderIds.includes(order.id) ? "Gereed" : order.status
@@ -861,6 +871,10 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem("staaltoolUploadedPdfOrders", JSON.stringify(uploadedPdfOrders));
   }, [uploadedPdfOrders]);
+
+  useEffect(() => {
+    localStorage.setItem("staaltoolHiddenDemoOrderIds", JSON.stringify(hiddenDemoOrderIds));
+  }, [hiddenDemoOrderIds]);
 
   useEffect(() => {
     localStorage.setItem("staaltoolPickbonLines", JSON.stringify(pickbonLines));
@@ -1346,9 +1360,19 @@ export default function App() {
   function confirmRemoveOrder() {
     if (!confirmRemoveOrderId) return;
 
-    setUploadedPdfOrders((currentOrders) =>
-      currentOrders.filter((order) => order.id !== confirmRemoveOrderId)
-    );
+    const isUploadedOrder = uploadedPdfOrders.some((order) => order.id === confirmRemoveOrderId);
+
+    if (isUploadedOrder) {
+      setUploadedPdfOrders((currentOrders) =>
+        currentOrders.filter((order) => order.id !== confirmRemoveOrderId)
+      );
+    } else {
+      setHiddenDemoOrderIds((currentIds) =>
+        currentIds.includes(confirmRemoveOrderId)
+          ? currentIds
+          : [...currentIds, confirmRemoveOrderId]
+      );
+    }
 
     setProcessedOrderIds((currentIds) =>
       currentIds.filter((orderId) => orderId !== confirmRemoveOrderId)
