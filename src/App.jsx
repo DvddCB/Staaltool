@@ -2111,9 +2111,7 @@ export default function App() {
                   <div style={styles.selectedOrderButtons}>
                     <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
                     {canRemoveOrders && (
-                      {canRemoveOrders && (
                       <button style={styles.removeSelectedOrderButton} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
-                    )}
                     )}
                   </div>
                 </div>
