@@ -308,6 +308,58 @@ const demoPickerDays = [
   { dag: "Vr", datum: "10", orders: 5 }
 ];
 
+function startOfWeek(date) {
+  const nextDate = new Date(date);
+  const day = nextDate.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  nextDate.setDate(nextDate.getDate() + diff);
+  nextDate.setHours(0, 0, 0, 0);
+  return nextDate;
+}
+
+function addDays(date, amount) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount);
+  return nextDate;
+}
+
+function addWeeks(date, amount) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + amount * 7);
+  return startOfWeek(nextDate);
+}
+
+function formatDutchDate(date) {
+  return date.toLocaleDateString("nl-NL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short"
+  });
+}
+
+function formatWeekLabel(weekStart) {
+  const weekEnd = addDays(weekStart, 4);
+  return `${weekStart.toLocaleDateString("nl-NL", { day: "numeric", month: "short" })} - ${weekEnd.toLocaleDateString("nl-NL", { day: "numeric", month: "short", year: "numeric" })}`;
+}
+
+function getWeekDays(weekStart) {
+  return [0, 1, 2, 3, 4].map((offset) => {
+    const date = addDays(weekStart, offset);
+
+    return {
+      date,
+      dag: date.toLocaleDateString("nl-NL", { weekday: "short" }),
+      datum: String(date.getDate()),
+      label: formatDutchDate(date)
+    };
+  });
+}
+
+function isSameDate(a, b) {
+  return a.toDateString() === b.toDateString();
+}
+
+
 export default function App() {
   const controlsRef = useRef(null);
   const scanLockRef = useRef(false);
@@ -317,6 +369,7 @@ export default function App() {
   const [pickerView, setPickerView] = useState("home");
   const [selectedPickerOrder, setSelectedPickerOrder] = useState(demoPickerOrders[1]);
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
+  const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -349,6 +402,8 @@ export default function App() {
   const filteredSizes = sizes.filter((item) =>
     String(item).toLowerCase().includes(query.toLowerCase())
   );
+  const pickerWeekDays = getWeekDays(pickerWeekStart);
+  const today = new Date();
 
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
@@ -1019,45 +1074,69 @@ export default function App() {
                   <div>
                     <p style={styles.label}>Planning</p>
                     <h2 style={styles.sectionTitle}>Visuele agenda</h2>
+                    <p style={styles.weekLabel}>{formatWeekLabel(pickerWeekStart)}</p>
                   </div>
 
-                  <div style={styles.agendaToggle}>
-                    <button style={styles.smallDarkButton}>Week</button>
-                    <button style={styles.smallLightButton}>Dag</button>
+                  <div style={styles.weekNav}>
+                    <button
+                      style={styles.smallLightButton}
+                      onClick={() => setPickerWeekStart((current) => addWeeks(current, -1))}
+                    >
+                      Vorige week
+                    </button>
+                    <button
+                      style={styles.smallDarkButton}
+                      onClick={() => setPickerWeekStart(startOfWeek(new Date()))}
+                    >
+                      Vandaag
+                    </button>
+                    <button
+                      style={styles.smallLightButton}
+                      onClick={() => setPickerWeekStart((current) => addWeeks(current, 1))}
+                    >
+                      Volgende week
+                    </button>
                   </div>
                 </div>
 
                 <div style={styles.calendarGrid}>
-                  {demoPickerDays.map((day, index) => (
-                    <div
-                      key={day.datum}
-                      style={index === 1 ? styles.calendarDayActive : styles.calendarDay}
-                    >
-                      <div style={styles.calendarDayHeader}>
-                        <div>
-                          <p style={styles.calendarDayName}>{day.dag}</p>
-                          <p style={styles.calendarDate}>{day.datum}</p>
-                        </div>
-                        <span style={styles.calendarCount}>{day.orders}</span>
-                      </div>
+                  {pickerWeekDays.map((day, index) => {
+                    const isToday = isSameDate(day.date, today);
+                    const showOrders = isToday || index === 0;
 
-                      {index === 1 &&
-                        demoPickerOrders.map((order) => (
-                          <button
-                            key={order.id}
-                            style={{
-                              ...styles.calendarOrder,
-                              background: order.status === "Gereed" ? "#16a34a" : "#eab308",
-                              color: order.status === "Gereed" ? "white" : "#0f172a"
-                            }}
-                            onClick={() => setSelectedPickerOrder(order)}
-                          >
-                            <span style={styles.calendarOrderTime}>{order.tijd}</span>
-                            <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
-                          </button>
-                        ))}
-                    </div>
-                  ))}
+                    return (
+                      <div
+                        key={day.label}
+                        style={isToday ? styles.calendarDayActive : styles.calendarDay}
+                      >
+                        <div style={styles.calendarDayHeader}>
+                          <div>
+                            <p style={styles.calendarDayName}>{day.dag}</p>
+                            <p style={styles.calendarDate}>{day.datum}</p>
+                          </div>
+                          <span style={styles.calendarCount}>
+                            {showOrders ? demoPickerOrders.length : 0}
+                          </span>
+                        </div>
+
+                        {showOrders &&
+                          demoPickerOrders.map((order) => (
+                            <button
+                              key={order.id}
+                              style={{
+                                ...styles.calendarOrder,
+                                background: order.status === "Gereed" ? "#16a34a" : "#eab308",
+                                color: order.status === "Gereed" ? "white" : "#0f172a"
+                              }}
+                              onClick={() => setSelectedPickerOrder(order)}
+                            >
+                              <span style={styles.calendarOrderTime}>{order.tijd}</span>
+                              <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
+                            </button>
+                          ))}
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
 
@@ -2345,5 +2424,67 @@ const styles = {
     fontSize: 13,
     fontWeight: 900,
     width: "fit-content"
+  },
+  pickerHomePage: {
+    display: "grid",
+    gridTemplateColumns: "1.15fr 1fr",
+    gap: 14,
+    alignItems: "stretch"
+  },
+  orderSplitGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 14,
+    minHeight: 520
+  },
+  todoOrdersPanel: {
+    background: "#fef9c3",
+    border: "1px solid #fde047",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  doneOrdersPanel: {
+    background: "#dcfce7",
+    border: "1px solid #86efac",
+    borderRadius: 18,
+    padding: 14,
+    minHeight: 520
+  },
+  agendaPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 14,
+    height: "100%"
+  },
+  weekLabel: {
+    margin: "5px 0 0",
+    color: "#64748b",
+    fontWeight: 800
+  },
+  weekNav: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    justifyContent: "flex-end"
+  },
+  calendarGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: 10
+  },
+  calendarDay: {
+    minHeight: 250,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 16,
+    padding: 12
+  },
+  calendarDayActive: {
+    minHeight: 250,
+    background: "#eff6ff",
+    border: "2px solid #1234aa",
+    borderRadius: 16,
+    padding: 11
   },
 };
