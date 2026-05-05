@@ -401,11 +401,28 @@ function isOrderOpen(order) {
 }
 
 
+function getOrderProgress(order) {
+  const rows = order?.rows || [];
+  const total = rows.length || Number(order?.regels || 0) || 0;
+
+  if (order?.status === "Gereed") {
+    return { done: total, open: 0, total };
+  }
+
+  const done = rows.filter((row) => row.processed || row.scannedQuantity >= row.quantity).length;
+
+  return {
+    done,
+    open: Math.max(0, total - done),
+    total
+  };
+}
+
 export default function App() {
   const controlsRef = useRef(null);
   const scanLockRef = useRef(false);
 
-  const [loggedIn, setLoggedIn] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem("staaltoolLoggedIn") === "true");
   const [selectedModule, setSelectedModule] = useState("");
   const [pickerView, setPickerView] = useState("home");
   const [selectedPickerOrder, setSelectedPickerOrder] = useState(() => getDemoOrdersWithDates()[1]);
@@ -478,6 +495,7 @@ export default function App() {
     event.preventDefault();
 
     if (username === "Circulaire-Bouwmaterialen" && password === "Houthandel18") {
+      localStorage.setItem("staaltoolLoggedIn", "true");
       setLoggedIn(true);
       setError("");
     } else {
@@ -519,6 +537,7 @@ export default function App() {
 
   function logout() {
     stopScanner();
+    localStorage.removeItem("staaltoolLoggedIn");
     setLoggedIn(false);
     setSelectedModule("");
     setUsername("");
@@ -1177,7 +1196,19 @@ export default function App() {
                       <div style={styles.orderMeta}>
                         <span>{formatDutchDate(getOrderDate(order))}</span>
                         <span>{order.tijd}</span>
-                        <span>{order.regels} regels</span>
+                        <span>{getOrderProgress(order).done} gedaan</span>
+                        <span>{getOrderProgress(order).open} open</span>
+                      </div>
+
+                      <div style={styles.orderProgressBar}>
+                        <div
+                          style={{
+                            ...styles.orderProgressFill,
+                            width: `${getOrderProgress(order).total
+                              ? (getOrderProgress(order).done / getOrderProgress(order).total) * 100
+                              : 0}%`
+                          }}
+                        />
                       </div>
                     </button>
                   ))}
@@ -1307,7 +1338,7 @@ export default function App() {
                     <h2 style={styles.selectedOrderTitle}>{selectedPickerOrder?.id}</h2>
                     <p style={styles.selectedOrderCustomer}>{selectedPickerOrder?.klant}</p>
                     <p style={styles.selectedOrderMeta}>
-                      Datum: {selectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(selectedPickerOrder)) : ""} · Tijd: {selectedPickerOrder?.tijd} · Regels: {selectedPickerOrder?.regels} · Status: {selectedPickerOrder?.status}
+                      Datum: {selectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(selectedPickerOrder)) : ""} · Tijd: {selectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(selectedPickerOrder).done} · Open: {getOrderProgress(selectedPickerOrder).open} · Status: {selectedPickerOrder?.status}
                     </p>
                   </div>
 
@@ -2734,5 +2765,18 @@ const styles = {
     fontWeight: 900,
     cursor: "pointer",
     fontSize: 16
+  },
+  orderProgressBar: {
+    width: "100%",
+    height: 8,
+    background: "rgba(15,23,42,0.10)",
+    borderRadius: 999,
+    overflow: "hidden",
+    marginTop: 10
+  },
+  orderProgressFill: {
+    height: "100%",
+    background: "#16a34a",
+    borderRadius: 999
   },
 };
