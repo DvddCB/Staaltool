@@ -668,6 +668,7 @@ export default function App() {
   const scanLockRef = useRef(false);
 
   const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem("staaltoolLoggedIn") === "true");
+  const [userRole, setUserRole] = useState(() => localStorage.getItem("staaltoolUserRole") || "");
   const [selectedModule, setSelectedModule] = useState("");
   const [pickerView, setPickerView] = useState("home");
   const [selectedPickerOrder, setSelectedPickerOrder] = useState(() => getDemoOrdersWithDates()[1]);
@@ -765,6 +766,10 @@ export default function App() {
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
   const articleCode = lengthIsValid ? getArticleCode(type, size, lengthMm, colorCode) : "";
+  const isAdmin = userRole === "admin";
+  const canUploadPdf = isAdmin;
+  const canEditDates = isAdmin;
+  const canRemoveOrders = isAdmin;
 
   useEffect(() => {
     localStorage.setItem("staaltoolProcessedOrderIds", JSON.stringify(processedOrderIds));
@@ -806,8 +811,54 @@ export default function App() {
   }
 
   async function handlePdfUpload(event) {
-    setSearchError("PDF uploaden is uitgeschakeld voor deze gebruiker.");
-    if (event?.target) event.target.value = "";
+    if (!canUploadPdf) {
+      setSearchError("PDF uploaden is alleen beschikbaar voor de beheerder.");
+      if (event?.target) event.target.value = "";
+      return;
+    }
+
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setPdfUploadMessage("PDF wordt gelezen...");
+    setSearchError("");
+
+    try {
+      const { pdf, text } = await readPdfTextWithPdfJs(file);
+      let fullText = text || "";
+      let order = parseLogic4PickbonTextToOrder(fullText, file.name);
+
+      if (!order.rows.length) {
+        setPdfUploadMessage("PDF bevat geen tekst of geen artikelregels. OCR wordt gestart...");
+        const ocrText = await readPdfTextWithOcr(pdf);
+        fullText = `${fullText}\n${ocrText}`;
+        order = parseLogic4PickbonTextToOrder(fullText, file.name);
+      }
+
+      if (!order.rows.length) {
+        console.log("PDF tekst/OCR tekst:", fullText);
+        setPdfUploadMessage("");
+        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Open de browser-console om de OCR tekst te controleren.");
+        event.target.value = "";
+        return;
+      }
+
+      setUploadedPdfOrders((currentOrders) => {
+        const withoutSameOrder = currentOrders.filter((item) => item.id !== order.id);
+        return [...withoutSameOrder, order];
+      });
+
+      setSelectedPickerOrder(order);
+      setLastUploadedOrderId(order.id);
+      setPickerWeekStart(startOfWeek(getOrderDate(order)));
+      setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s). Kies eventueel direct een plandatum.`);
+      event.target.value = "";
+    } catch (err) {
+      console.error(err);
+      setPdfUploadMessage("");
+      setSearchError("PDF kon niet worden gelezen. Probeer opnieuw of stuur een voorbeeld-PDF om de herkenning te verbeteren.");
+      event.target.value = "";
+    }
   }
 
   function handleBrowserBack() {
@@ -836,13 +887,25 @@ export default function App() {
   function handleLogin(event) {
     event.preventDefault();
 
-    if (username === "Gebruiker1" && password === "Test123") {
+    if (username === "Circulaire-Bouwmaterialen" && password === "Houthandel18") {
       localStorage.setItem("staaltoolLoggedIn", "true");
+      localStorage.setItem("staaltoolUserRole", "admin");
+      setUserRole("admin");
       setLoggedIn(true);
       setError("");
-    } else {
-      setError("Onjuiste gegevens");
+      return;
     }
+
+    if (username === "Gebruiker1" && password === "Test123") {
+      localStorage.setItem("staaltoolLoggedIn", "true");
+      localStorage.setItem("staaltoolUserRole", "worker");
+      setUserRole("worker");
+      setLoggedIn(true);
+      setError("");
+      return;
+    }
+
+    setError("Onjuiste gegevens");
   }
 
   function clearTool(nextStep = selectedModule === "Artikelzoeker" ? "search" : "types") {
@@ -879,6 +942,8 @@ export default function App() {
   function logout() {
     stopScanner();
     localStorage.removeItem("staaltoolLoggedIn");
+    localStorage.removeItem("staaltoolUserRole");
+    setUserRole("");
     setLoggedIn(false);
     setSelectedModule("");
     setUsername("");
@@ -1188,11 +1253,45 @@ export default function App() {
   }
 
   function requestRemoveOrder(orderId) {
-    return;
+    if (!canRemoveOrders) {
+      setSearchError("Orders verwijderen is alleen beschikbaar voor de beheerder.");
+      return;
+    }
+
+    if (!orderId) return;
+    setConfirmRemoveOrderId(orderId);
   }
 
   function confirmRemoveOrder() {
-    return;
+    if (!canRemoveOrders) {
+      setConfirmRemoveOrderId(null);
+      setSearchError("Orders verwijderen is alleen beschikbaar voor de beheerder.");
+      return;
+    }
+
+    if (!confirmRemoveOrderId) return;
+
+    const isUploadedOrder = uploadedPdfOrders.some((order) => order.id === confirmRemoveOrderId);
+
+    if (isUploadedOrder) {
+      setUploadedPdfOrders((currentOrders) => currentOrders.filter((order) => order.id !== confirmRemoveOrderId));
+    } else {
+      setHiddenDemoOrderIds((currentIds) =>
+        currentIds.includes(confirmRemoveOrderId) ? currentIds : [...currentIds, confirmRemoveOrderId]
+      );
+    }
+
+    setProcessedOrderIds((currentIds) => currentIds.filter((orderId) => orderId !== confirmRemoveOrderId));
+
+    if (selectedPickerOrder?.id === confirmRemoveOrderId) {
+      const remainingOrders = effectivePickerOrders.filter((order) => order.id !== confirmRemoveOrderId);
+      setSelectedPickerOrder(remainingOrders[0] || null);
+      setPickerView("home");
+      setPickbonLines([]);
+      setPickbonNumber("");
+    }
+
+    setConfirmRemoveOrderId(null);
   }
 
   function cancelRemoveOrder() {
@@ -1200,7 +1299,27 @@ export default function App() {
   }
 
   function updateUploadedOrderDate(orderId, nextDate, options = {}) {
-    return;
+    if (!canEditDates) {
+      setSearchError("Datums wijzigen is alleen beschikbaar voor de beheerder.");
+      return;
+    }
+
+    if (!orderId || !nextDate) return;
+
+    setUploadedPdfOrders((currentOrders) =>
+      currentOrders.map((order) => (order.id === orderId ? { ...order, plannedDate: nextDate } : order))
+    );
+
+    setSelectedPickerOrder((currentOrder) =>
+      currentOrder?.id === orderId ? { ...currentOrder, plannedDate: nextDate } : currentOrder
+    );
+
+    setPickerWeekStart(startOfWeek(new Date(`${nextDate}T00:00:00`)));
+
+    if (options.clearUploadDatePicker) {
+      setLastUploadedOrderId("");
+      setPdfUploadMessage(`Plandatum ingesteld voor order ${orderId}.`);
+    }
   }
 
   function removePickbonLine(lineId) {
@@ -1426,7 +1545,7 @@ export default function App() {
             />
             <div>
               <h1 style={styles.headerTitle}>{getModuleDisplayName(selectedModule)}</h1>
-              <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen</p>
+              <p style={styles.headerSubtitle}>Artikelcodes voor circulaire bouwmaterialen · {isAdmin ? "Beheerder" : "Gebruiker"}</p>
             </div>
           </div>
 
@@ -1478,7 +1597,7 @@ export default function App() {
           </div>
         )}
 
-        {false && confirmRemoveOrderId && (
+        {confirmRemoveOrderId && (
           <div style={styles.confirmOverlay}>
             <div style={styles.confirmModal}>
               <h2 style={styles.confirmTitle}>Order uit lijst halen</h2>
@@ -1511,7 +1630,7 @@ export default function App() {
                 />
               </div>
 
-              {false && <div style={styles.pdfUploadPanel}>
+              {canUploadPdf && <div style={styles.pdfUploadPanel}>
                 <div>
                   <p style={styles.label}>PDF pickbon</p>
                   <h3 style={styles.pdfUploadTitle}>Pickbon uploaden</h3>
@@ -1525,7 +1644,7 @@ export default function App() {
 
                 {pdfUploadMessage && <div style={styles.pdfUploadMessage}>{pdfUploadMessage}</div>}
 
-                {lastUploadedOrderId && (
+                {canEditDates && lastUploadedOrderId && (
                   <div style={styles.pdfDatePanel}>
                     <label style={styles.pdfDateLabel}>Plandatum voor order {lastUploadedOrderId}</label>
                     <input
@@ -1571,6 +1690,7 @@ export default function App() {
                       </div>
 
                       <div style={styles.orderMeta}>
+                        <span>{formatDutchDate(getOrderDate(order))}</span>
                         <span>{order.tijd}</span>
                         <span style={styles.orderProgressText}>
                           <strong>{getOrderProgress(order).done}</strong> gedaan · <strong>{getOrderProgress(order).open}</strong> open
@@ -1586,7 +1706,7 @@ export default function App() {
                         />
                       </div>
 
-                      <div style={styles.orderCardActions}>
+                      {canRemoveOrders && <div style={styles.orderCardActions}>
                         <button
                           type="button"
                           style={styles.removeOrderButton}
@@ -1597,7 +1717,7 @@ export default function App() {
                         >
                           Uit lijst halen
                         </button>
-                      </div>
+                      </div>}
                     </button>
                   ))}
                 </div>
@@ -1636,7 +1756,7 @@ export default function App() {
                   <div style={styles.openOrderWarning}>
                     <div>
                       <strong>Let op: er staan nog open orders buiten deze week.</strong>
-                      <span> Oudste: {oldestOpenOrderOutsideWeek.id}</span>
+                      <span> Oudste: {oldestOpenOrderOutsideWeek.id} · {formatDutchDate(getOrderDate(oldestOpenOrderOutsideWeek))}</span>
                     </div>
                     <button
                       style={styles.warningButton}
@@ -1692,12 +1812,15 @@ export default function App() {
                     <h2 style={styles.selectedOrderTitle}>{currentSelectedPickerOrder?.id}</h2>
                     <p style={styles.selectedOrderCustomer}>{currentSelectedPickerOrder?.klant}</p>
                     <p style={styles.selectedOrderMeta}>
-                      Tijd: {currentSelectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(currentSelectedPickerOrder).done} · Open: {getOrderProgress(currentSelectedPickerOrder).open} · Status: {currentSelectedPickerOrder?.status}
+                      Datum: {currentSelectedPickerOrder?.plannedDate ? formatDutchDate(getOrderDate(currentSelectedPickerOrder)) : ""} · Tijd: {currentSelectedPickerOrder?.tijd} · Gedaan: {getOrderProgress(currentSelectedPickerOrder).done} · Open: {getOrderProgress(currentSelectedPickerOrder).open} · Status: {currentSelectedPickerOrder?.status}
                     </p>
                   </div>
 
                   <div style={styles.selectedOrderButtons}>
                     <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
+                    {canRemoveOrders && (
+                      <button style={styles.removeSelectedOrderButton} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
+                    )}
                   </div>
                 </div>
               </section>
@@ -1743,7 +1866,7 @@ export default function App() {
                   </div>
                 )}
 
-                {false && currentSelectedPickerOrder?.source === "PDF" && (
+                {canEditDates && currentSelectedPickerOrder?.source === "PDF" && (
                   <div style={styles.pickbonDateEdit}>
                     <label style={styles.pdfDateLabel}>Plandatum</label>
                     <input
