@@ -372,6 +372,11 @@ function toIsoDate(date) {
 function getDemoOrdersWithDates() {
   const today = new Date();
 
+  const isAdmin = userRole === "admin";
+  const canUploadPdf = isAdmin;
+  const canEditDates = isAdmin;
+  const canRemoveOrders = isAdmin;
+
   const thisWeek = startOfWeek(today);
   const previousWeek = addWeeks(thisWeek, -1);
   const nextWeek = addWeeks(thisWeek, 1);
@@ -850,11 +855,6 @@ export default function App() {
   const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
   const today = new Date();
-
-  const isAdmin = userRole === "admin";
-  const canUploadPdf = isAdmin;
-  const canEditDates = isAdmin;
-  const canRemoveOrders = isAdmin;
 
   const effectivePickerOrders = useMemo(() => {
     return uploadedPdfOrders.map((order) => ({
@@ -1894,6 +1894,9 @@ export default function App() {
                 <div>
                   <p style={styles.label}>Artikel Picker</p>
                   <h2 style={styles.sectionTitle}>Orders verwerken</h2>
+                  {!isAdmin && (
+                    <p style={styles.workerNotice}>Je werkt als gebruiker. Uploaden, datums wijzigen en verwijderen zijn uitgeschakeld.</p>
+                  )}
                 </div>
 
                 <button style={styles.smallLightButton} onClick={loadOrdersFromSupabase}>
@@ -2108,7 +2111,9 @@ export default function App() {
                   <div style={styles.selectedOrderButtons}>
                     <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
                     {canRemoveOrders && (
+                      {canRemoveOrders && (
                       <button style={styles.removeSelectedOrderButton} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
+                    )}
                     )}
                   </div>
                 </div>
@@ -3574,6 +3579,15 @@ const styles = {
     fontWeight: 800,
     color: "#0f172a",
     background: "white"
+  },
+  workerNotice: {
+    margin: "8px 0 0",
+    color: "#475569",
+    background: "#f1f5f9",
+    borderRadius: 10,
+    padding: "8px 10px",
+    fontSize: 13,
+    fontWeight: 800
   },
   pickbonDateEdit: {
     display: "grid",
