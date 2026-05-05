@@ -711,6 +711,7 @@ export default function App() {
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) => String(item).toLowerCase().includes(query.toLowerCase()));
   const pickerWeekDays = getWeekDays(pickerWeekStart);
+
   const today = new Date();
 
   const effectivePickerOrders = useMemo(() => {
