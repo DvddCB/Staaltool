@@ -429,7 +429,13 @@ export default function App() {
   const [pickerOrderQuery, setPickerOrderQuery] = useState("");
   const [pickerOrderPage, setPickerOrderPage] = useState(1);
   const [pickerWeekStart, setPickerWeekStart] = useState(() => startOfWeek(new Date()));
-  const [processedOrderIds, setProcessedOrderIds] = useState([]);
+  const [processedOrderIds, setProcessedOrderIds] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("staaltoolProcessedOrderIds") || "[]");
+    } catch {
+      return [];
+    }
+  });
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
 
   const [username, setUsername] = useState("");
@@ -452,8 +458,14 @@ export default function App() {
   const [manualCode, setManualCode] = useState("");
   const [searchError, setSearchError] = useState("");
 
-  const [pickbonLines, setPickbonLines] = useState([]);
-  const [pickbonNumber, setPickbonNumber] = useState("");
+  const [pickbonLines, setPickbonLines] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem("staaltoolPickbonLines") || "[]");
+    } catch {
+      return [];
+    }
+  });
+  const [pickbonNumber, setPickbonNumber] = useState(() => localStorage.getItem("staaltoolPickbonNumber") || "");
 
   const [logic4OrderNumber, setLogic4OrderNumber] = useState("");
   const [logic4Message, setLogic4Message] = useState("");
@@ -509,6 +521,18 @@ export default function App() {
   const lengthNumber = Number(lengthMm);
   const lengthIsValid = lengthNumber >= 1000 && lengthNumber <= 20000 && lengthNumber % 50 === 0;
   const articleCode = lengthIsValid ? getArticleCode(type, size, lengthMm, colorCode) : "";
+
+  useEffect(() => {
+    localStorage.setItem("staaltoolProcessedOrderIds", JSON.stringify(processedOrderIds));
+  }, [processedOrderIds]);
+
+  useEffect(() => {
+    localStorage.setItem("staaltoolPickbonLines", JSON.stringify(pickbonLines));
+  }, [pickbonLines]);
+
+  useEffect(() => {
+    localStorage.setItem("staaltoolPickbonNumber", pickbonNumber || "");
+  }, [pickbonNumber]);
 
   function handleLogin(event) {
     event.preventDefault();
@@ -1585,6 +1609,9 @@ export default function App() {
                       <div key={line.id} style={line.processed ? styles.pickbonLineDone : styles.pickbonLine} className="pickbon-line-responsive">
                         <div style={styles.pickbonLineMain}>
                           <strong>{line.description}</strong>
+                          <span style={line.processed ? styles.lineProgressDone : styles.lineProgressOpen}>
+                            {Number(line.scannedQuantity || 0)} / {Number(line.quantity || 1)} gepickt
+                          </span>
                           <span style={styles.pickbonCode}>{line.articleCode}</span>
                           {line.scannedQuantity !== undefined && (
                             <span style={line.processed ? styles.pickbonDoneText : styles.pickbonTodoText}>
@@ -1600,15 +1627,10 @@ export default function App() {
                         </div>
 
                         <div style={styles.pickbonLineControls} className="pickbon-controls-responsive">
-                          <label style={styles.qtyLabel}>Aantal</label>
-                          <input
-                            style={styles.qtyInput}
-                            type="number"
-                            min="1"
-                            max={line.scannedQuantity !== undefined ? line.quantity : undefined}
-                            value={line.quantity}
-                            onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
-                          />
+                          <div style={styles.requestedQtyBox}>
+                            <span style={styles.qtyLabel}>Aantal</span>
+                            <strong>{line.quantity} stuks</strong>
+                          </div>
 
                           {!line.processed && Number(line.scannedQuantity || 0) < Number(line.quantity || 1) && (
                             <button style={styles.smallScanButton} onClick={startScanner}>
@@ -3096,5 +3118,34 @@ const styles = {
     color: "#64748b",
     fontWeight: 800,
     fontSize: 13
+  },
+  requestedQtyBox: {
+    minWidth: 92,
+    background: "#f8fafc",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: "8px 10px",
+    display: "flex",
+    flexDirection: "column",
+    gap: 2,
+    textAlign: "center"
+  },
+  lineProgressOpen: {
+    width: "fit-content",
+    background: "#fef9c3",
+    color: "#854d0e",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  lineProgressDone: {
+    width: "fit-content",
+    background: "#dcfce7",
+    color: "#166534",
+    borderRadius: 999,
+    padding: "5px 9px",
+    fontSize: 13,
+    fontWeight: 900
   },
 };
