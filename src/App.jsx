@@ -850,14 +850,15 @@ export default function App() {
         if (line.id !== lineId) return line;
 
         const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
+        const alreadyPicked = Number(line.scannedQuantity || 0);
+        const remainingQuantity = Math.max(1, requestedQuantity - alreadyPicked);
         const value = Math.max(1, Number(nextQuantity) || 1);
-        const safeQuantity = Math.min(value, requestedQuantity);
-        const pickedQuantity = Number(line.scannedQuantity || 0);
+        const safeQuantity = Math.min(value, remainingQuantity);
 
         return {
           ...line,
           quantity: safeQuantity,
-          processed: pickedQuantity >= requestedQuantity
+          processed: alreadyPicked >= requestedQuantity
         };
       })
     );
@@ -883,13 +884,18 @@ export default function App() {
         if (line.id !== confirmLineId) return line;
 
         const requestedQuantity = Number(line.originalQuantity || line.quantity || 1);
-        const chosenPickedQuantity = Number(line.quantity || 1);
-        const pickedQuantity = Math.min(chosenPickedQuantity, requestedQuantity);
+        const alreadyPicked = Number(line.scannedQuantity || 0);
+        const remainingQuantity = Math.max(0, requestedQuantity - alreadyPicked);
+        const chosenPickedQuantity = Math.max(1, Number(line.quantity || 1));
+        const pickedThisTime = Math.min(chosenPickedQuantity, remainingQuantity);
+        const nextPickedQuantity = Math.min(alreadyPicked + pickedThisTime, requestedQuantity);
+        const nextRemainingQuantity = Math.max(1, requestedQuantity - nextPickedQuantity);
 
         return {
           ...line,
-          scannedQuantity: line.scannedQuantity !== undefined ? pickedQuantity : line.scannedQuantity,
-          processed: pickedQuantity >= requestedQuantity,
+          quantity: nextRemainingQuantity,
+          scannedQuantity: line.scannedQuantity !== undefined ? nextPickedQuantity : line.scannedQuantity,
+          processed: nextPickedQuantity >= requestedQuantity,
           scannedAt: new Date().toLocaleString("nl-NL")
         };
       })
@@ -1634,12 +1640,15 @@ export default function App() {
                               style={styles.qtyInput}
                               type="number"
                               min="1"
-                              max={line.originalQuantity || line.quantity}
-                              value={line.quantity}
+                              max={Math.max(1, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))}
+                              value={Math.min(
+                                Number(line.quantity || 1),
+                                Math.max(1, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))
+                              )}
                               onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                             />
                             <span style={styles.qtyMaxText}>
-                              gevraagd: {line.originalQuantity || line.quantity}
+                              resterend: {Math.max(0, Number(line.originalQuantity || line.quantity || 1) - Number(line.scannedQuantity || 0))}
                             </span>
                           </div>
 
