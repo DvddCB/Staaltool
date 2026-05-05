@@ -802,6 +802,7 @@ export default function App() {
     }
   });
   const [pdfUploadMessage, setPdfUploadMessage] = useState("");
+  const [lastUploadedOrderId, setLastUploadedOrderId] = useState("");
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
   const [confirmRemoveOrderId, setConfirmRemoveOrderId] = useState(null);
 
@@ -945,8 +946,9 @@ export default function App() {
       });
 
       setSelectedPickerOrder(order);
+      setLastUploadedOrderId(order.id);
       setPickerWeekStart(startOfWeek(getOrderDate(order)));
-      setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s).`);
+      setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s). Kies eventueel direct een plandatum.`);
       event.target.value = "";
     } catch (err) {
       console.error(err);
@@ -1421,6 +1423,22 @@ export default function App() {
     setConfirmRemoveOrderId(null);
   }
 
+  function updateUploadedOrderDate(orderId, nextDate) {
+    if (!orderId || !nextDate) return;
+
+    setUploadedPdfOrders((currentOrders) =>
+      currentOrders.map((order) =>
+        order.id === orderId ? { ...order, plannedDate: nextDate } : order
+      )
+    );
+
+    setSelectedPickerOrder((currentOrder) =>
+      currentOrder?.id === orderId ? { ...currentOrder, plannedDate: nextDate } : currentOrder
+    );
+
+    setPickerWeekStart(startOfWeek(new Date(`${nextDate}T00:00:00`)));
+  }
+
   function removePickbonLine(lineId) {
     setPickbonLines((currentLines) => currentLines.filter((line) => line.id !== lineId));
   }
@@ -1866,6 +1884,23 @@ export default function App() {
                 </label>
 
                 {pdfUploadMessage && <div style={styles.pdfUploadMessage}>{pdfUploadMessage}</div>}
+
+                {lastUploadedOrderId && (
+                  <div style={styles.pdfDatePanel}>
+                    <label style={styles.pdfDateLabel}>
+                      Plandatum voor order {lastUploadedOrderId}
+                    </label>
+                    <input
+                      style={styles.pdfDateInput}
+                      type="date"
+                      value={
+                        uploadedPdfOrders.find((order) => order.id === lastUploadedOrderId)?.plannedDate ||
+                        toIsoDate(new Date())
+                      }
+                      onChange={(event) => updateUploadedOrderDate(lastUploadedOrderId, event.target.value)}
+                    />
+                  </div>
+                )}
               </div>
 
               <div style={styles.allOrdersPanel}>
@@ -3677,5 +3712,39 @@ const styles = {
     fontWeight: 900,
     cursor: "pointer",
     fontSize: 16
+  },
+  pdfDatePanel: {
+    gridColumn: "1 / -1",
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 10,
+    alignItems: "center",
+    background: "white",
+    border: "1px solid #bfdbfe",
+    borderRadius: 12,
+    padding: 10
+  },
+  pdfDateLabel: {
+    color: "#334155",
+    fontSize: 13,
+    fontWeight: 900
+  },
+  pdfDateInput: {
+    border: "1px solid #cbd5e1",
+    borderRadius: 10,
+    padding: "10px 12px",
+    fontWeight: 800,
+    color: "#0f172a",
+    background: "white"
+  },
+  selectedDateEdit: {
+    display: "grid",
+    gridTemplateColumns: "1fr auto",
+    gap: 10,
+    alignItems: "center",
+    background: "rgba(255,255,255,0.12)",
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12
   },
 };
