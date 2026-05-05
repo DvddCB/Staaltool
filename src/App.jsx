@@ -451,27 +451,51 @@ async function loadPdfJsFromCdn() {
   return window.pdfjsLib;
 }
 
-function findQuantityNearCode(lines, lineIndex, code) {
-  const candidates = [];
 
-  for (let offset = 0; offset <= 2; offset++) {
-    const line = lines[lineIndex + offset] || "";
-    const afterCode = line.slice(line.indexOf(code) + code.length);
-    const numbers = afterCode.match(/\b\d+\b/g) || [];
-
-    numbers.forEach((numberText) => {
-      const value = Number(numberText);
-      if (value > 0 && value <= 999) candidates.push(value);
-    });
+async function loadTesseractFromCdn() {
+  if (window.Tesseract) {
+    return window.Tesseract;
   }
 
-  return candidates[0] || 1;
+  await new Promise((resolve, reject) => {
+    const existingScript = document.querySelector("script[data-tesseract-cdn='true']");
+
+    if (existingScript) {
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    script.async = true;
+    script.dataset.tesseractCdn = "true";
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+
+  if (!window.Tesseract) {
+    throw new Error("OCR kon niet worden geladen.");
+  }
+
+  return window.Tesseract;
+}
+
+
+function normalizeOcrText(text) {
+  return String(text || "")
+    .replace(/[|]/g, " ")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function parseDutchPdfDate(text) {
   const dateMatch =
-    text.match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/) ||
-    text.match(/\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b/);
+    String(text || "").match(/\b(\d{1,2})[-/](\d{1,2})[-/](\d{4})\b/) ||
+    String(text || "").match(/\b(\d{4})[-/](\d{1,2})[-/](\d{1,2})\b/);
 
   if (!dateMatch) return toIsoDate(new Date());
 
@@ -489,38 +513,53 @@ function parseDutchPdfDate(text) {
   return `${year}-${month}-${day}`;
 }
 
-function parsePickbonTextToOrder(text, fileName) {
-  const cleanText = String(text || "").replace(/\s+/g, " ").trim();
+function parseLogic4PickbonTextToOrder(text, fileName) {
+  const cleanText = normalizeOcrText(text);
   const lines = String(text || "")
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
 
+  const pickbonMatch = cleanText.match(/Pickbon\s+(\d{3,})/i);
   const orderMatch =
-    cleanText.match(/(?:pickbon|order|ordernummer|bestelling|bon)[\s:#-]*([A-Z0-9-]{3,})/i) ||
-    cleanText.match(/\b(ORD[-\s]?\d{3,}|PB[-\s]?\d{3,}|\d{5,})\b/i);
+    cleanText.match(/Ordernummer[:\s]+(\d{3,})/i) ||
+    cleanText.match(/\b(30\d{5,})\b/);
 
-  const customerMatch =
-    cleanText.match(/(?:klant|debiteur|afnemer)[\s:#-]*([A-Za-zÀ-ÿ0-9 .,&'-]{3,60})/i);
+  const klantMatch =
+    cleanText.match(/Klantnummer[:\s]+(\d{2,})/i) ||
+    cleanText.match(/Voor\s*:\s*([A-Za-zÀ-ÿ0-9 .,&'-]{3,40})/i);
 
-  const articleCodeMatches = [];
+  const orderDate =
+    cleanText.match(/Orderdatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1] ||
+    cleanText.match(/Verzenddatum[:\s]+(\d{1,2}[-/]\d{1,2}[-/]\d{4})/i)?.[1];
+
+  const articleRows = [];
   const seenCodes = new Set();
 
   lines.forEach((line, lineIndex) => {
-    const codes = line.match(/\b\d{15,24}\b/g) || [];
+    const combinedLine = `${line} ${lines[lineIndex + 1] || ""}`.replace(/\s+/g, " ");
+    const codes = combinedLine.match(/\b\d{12,24}\b/g) || [];
 
-    codes.forEach((code) => {
-      if (seenCodes.has(code)) return;
+    codes.forEach((rawCode) => {
+      if (seenCodes.has(rawCode)) return;
 
-      const parsed = parseArticleCode(code);
+      const parsed = parseArticleCode(rawCode);
       if (!parsed) return;
 
-      seenCodes.add(code);
+      seenCodes.add(rawCode);
 
-      const quantity = findQuantityNearCode(lines, lineIndex, code);
-      const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode);
+      const afterCode = combinedLine.slice(combinedLine.indexOf(rawCode) + rawCode.length);
+      const quantityCandidates = (afterCode.match(/\b\d+\b/g) || [])
+        .map((value) => Number(value))
+        .filter((value) => value > 0 && value <= 999);
 
-      articleCodeMatches.push({
+      const quantity = quantityCandidates.length
+        ? quantityCandidates[quantityCandidates.length - 1]
+        : 1;
+
+      const articleCode = getArticleCode(parsed.type, parsed.size, parsed.length, parsed.colorCode) || rawCode;
+
+      articleRows.push({
         articleCode,
         description: `${parsed.type} ${parsed.size} - ${parsed.length} mm - ${parsed.colorCode}. ${parsed.colorName}`,
         type: parsed.type,
@@ -533,20 +572,66 @@ function parsePickbonTextToOrder(text, fileName) {
     });
   });
 
-  const orderId = orderMatch?.[1]?.replace(/\s+/g, "-") || `PDF-${Date.now()}`;
-  const klant = customerMatch?.[1]?.trim() || fileName.replace(/\.pdf$/i, "");
+  const fallbackId = fileName.replace(/\.pdf$/i, "") || `PDF-${Date.now()}`;
+  const orderId = orderMatch?.[1] || fallbackId;
+  const klant = klantMatch?.[1] ? `Klant ${klantMatch[1]}` : "Logic4 PDF pickbon";
 
   return {
     id: orderId,
+    pickbonNumber: pickbonMatch?.[1] || "",
     klant,
     tijd: "PDF",
     status: "Open",
-    regels: articleCodeMatches.length,
+    regels: articleRows.length,
     kleur: "#eab308",
-    plannedDate: parseDutchPdfDate(cleanText),
-    rows: articleCodeMatches,
+    plannedDate: orderDate ? parseDutchPdfDate(orderDate) : parseDutchPdfDate(cleanText),
+    rows: articleRows,
     source: "PDF"
   };
+}
+
+async function readPdfTextWithPdfJs(file) {
+  const pdfjsLib = await loadPdfJsFromCdn();
+  const buffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+  const pageTexts = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const content = await page.getTextContent();
+    const pageText = content.items.map((item) => item.str).join("\n");
+    pageTexts.push(pageText);
+  }
+
+  return {
+    pdf,
+    text: pageTexts.join("\n")
+  };
+}
+
+async function readPdfTextWithOcr(pdf) {
+  const Tesseract = await loadTesseractFromCdn();
+  const pageTexts = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+    const page = await pdf.getPage(pageNumber);
+    const viewport = page.getViewport({ scale: 2.2 });
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    await page.render({
+      canvasContext: context,
+      viewport
+    }).promise;
+
+    const result = await Tesseract.recognize(canvas, "nld+eng");
+    pageTexts.push(result?.data?.text || "");
+  }
+
+  return pageTexts.join("\n");
 }
 
 
@@ -686,24 +771,20 @@ export default function App() {
     setSearchError("");
 
     try {
-      const pdfjsLib = await loadPdfJsFromCdn();
-      const buffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
-      const pageTexts = [];
+      const { pdf, text } = await readPdfTextWithPdfJs(file);
+      let fullText = text || "";
+      let order = parseLogic4PickbonTextToOrder(fullText, file.name);
 
-      for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-        const page = await pdf.getPage(pageNumber);
-        const content = await page.getTextContent();
-        const pageText = content.items.map((item) => item.str).join("\n");
-        pageTexts.push(pageText);
+      if (!order.rows.length) {
+        setPdfUploadMessage("PDF bevat geen tekst. OCR wordt gestart...");
+        const ocrText = await readPdfTextWithOcr(pdf);
+        fullText = `${fullText}\n${ocrText}`;
+        order = parseLogic4PickbonTextToOrder(fullText, file.name);
       }
-
-      const fullText = pageTexts.join("\n");
-      const order = parsePickbonTextToOrder(fullText, file.name);
 
       if (!order.rows.length) {
         setPdfUploadMessage("");
-        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelcodes gevonden.");
+        setSearchError("PDF gelezen, maar er zijn geen herkenbare artikelregels gevonden. Controleer of de artikelcodes goed zichtbaar zijn.");
         event.target.value = "";
         return;
       }
@@ -715,15 +796,16 @@ export default function App() {
 
       setSelectedPickerOrder(order);
       setPickerWeekStart(startOfWeek(getOrderDate(order)));
-      setPdfUploadMessage(`PDF-order geladen: ${order.id} met ${order.rows.length} regel(s).`);
+      setPdfUploadMessage(`PDF-order ${order.id} geladen met ${order.rows.length} regel(s).`);
       event.target.value = "";
     } catch (err) {
       console.error(err);
       setPdfUploadMessage("");
-      setSearchError("PDF kon niet worden gelezen. Controleer of dit een tekst-PDF is en geen scan-afbeelding.");
+      setSearchError("PDF kon niet worden gelezen. Probeer opnieuw of stuur een voorbeeld-PDF om de herkenning te verbeteren.");
       event.target.value = "";
     }
   }
+
 
   function handleLogin(event) {
     event.preventDefault();
@@ -1560,7 +1642,7 @@ export default function App() {
                 <div>
                   <p style={styles.label}>PDF pickbon</p>
                   <h3 style={styles.pdfUploadTitle}>Pickbon uploaden</h3>
-                  <p style={styles.pdfUploadText}>Upload een Logic4 pickbon-PDF. Herkende regels komen direct in de orderlijst.</p>
+                  <p style={styles.pdfUploadText}>Upload een Logic4 pickbon-PDF. De app leest tekst of gebruikt OCR en zet de order direct in de lijst.</p>
                 </div>
 
                 <label style={styles.pdfUploadButton}>
