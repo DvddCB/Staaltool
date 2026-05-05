@@ -1,11 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
 import JsBarcode from "jsbarcode";
-import * as pdfjsLib from "pdfjs-dist";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
 const profielData = {
   HEA: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
   HEB: [100, 120, 140, 160, 180, 200, 220, 240, 260, 280, 300, 320, 340],
@@ -422,6 +417,40 @@ function getOrderProgress(order) {
   };
 }
 
+
+async function loadPdfJsFromCdn() {
+  if (window.pdfjsLib) {
+    return window.pdfjsLib;
+  }
+
+  await new Promise((resolve, reject) => {
+    const existingScript = document.querySelector("script[data-pdfjs-cdn='true']");
+
+    if (existingScript) {
+      existingScript.addEventListener("load", resolve, { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    script.async = true;
+    script.dataset.pdfjsCdn = "true";
+    script.onload = resolve;
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
+
+  if (!window.pdfjsLib) {
+    throw new Error("PDF.js kon niet worden geladen.");
+  }
+
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+  return window.pdfjsLib;
+}
+
 function findQuantityNearCode(lines, lineIndex, code) {
   const candidates = [];
 
@@ -657,6 +686,7 @@ export default function App() {
     setSearchError("");
 
     try {
+      const pdfjsLib = await loadPdfJsFromCdn();
       const buffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
       const pageTexts = [];
