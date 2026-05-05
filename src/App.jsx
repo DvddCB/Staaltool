@@ -1527,10 +1527,6 @@ export default function App() {
           </section>
         ) : selectedModule === "Artikelzoeker" && step !== "result" ? (
           <>
-            
-              <div style={styles.step}>2. Resultaat</div>
-            </div>
-
             <div style={styles.pickerBackRow}>
               <button style={styles.backButton} onClick={backToPickerPlanning}>
                 Terug naar planning
