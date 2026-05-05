@@ -994,6 +994,18 @@ export default function App() {
         }
 
         @media (max-width: 640px) {
+          .mobile-agenda-panel {
+            padding: 12px !important;
+          }
+
+          .mobile-agenda-panel h2 {
+            font-size: 20px !important;
+          }
+
+          .mobile-agenda-panel .week-nav-responsive {
+            margin-top: 8px !important;
+          }
+
           .app-header-responsive {
             align-items: stretch !important;
           }
@@ -1019,6 +1031,21 @@ export default function App() {
 
           .calendar-grid-responsive {
             grid-template-columns: 1fr !important;
+          }
+
+          .calendar-grid-responsive > div {
+            min-height: 92px !important;
+            padding: 10px !important;
+          }
+
+          .calendar-grid-responsive button {
+            padding: 8px !important;
+            margin-bottom: 6px !important;
+          }
+
+          .calendar-grid-responsive p {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
           }
 
           .week-nav-responsive {
@@ -1135,7 +1162,7 @@ export default function App() {
                             ? styles.doneOrderCard
                             : styles.todoOrderCard
                       }
-                      onClick={() => setSelectedPickerOrder(order)}
+                      onClick={() => openPickerOrder(order)}
                     >
                       <div style={styles.orderCardTop}>
                         <div>
@@ -1183,7 +1210,7 @@ export default function App() {
             </section>
 
             <section style={styles.agendaPanel}>
-              <section style={styles.panel}>
+              <section style={styles.panel} className="mobile-agenda-panel">
                 <div style={styles.pickerPanelHeader}>
                   <div>
                     <p style={styles.label}>Planning</p>
@@ -1261,7 +1288,7 @@ export default function App() {
                                 background: order.status === "Gereed" ? "#16a34a" : "#eab308",
                                 color: order.status === "Gereed" ? "white" : "#0f172a"
                               }}
-                              onClick={() => setSelectedPickerOrder(order)}
+                              onClick={() => openPickerOrder(order)}
                             >
                               <span style={styles.calendarOrderTime}>{order.tijd}</span>
                               <strong>{order.status === "Gereed" ? "✓ " : ""}{order.id}</strong>
