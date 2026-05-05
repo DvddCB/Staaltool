@@ -456,6 +456,8 @@ export default function App() {
   const [logic4OrderNumber, setLogic4OrderNumber] = useState("");
   const [logic4Message, setLogic4Message] = useState("");
 
+  const [confirmLineId, setConfirmLineId] = useState(null);
+
   const types = ["HEA", "HEB", "IPE", "UNP", "Koker", "Hoeklijn gelijkzijdig", "Hoeklijn ongelijkzijdig", "Stripstaal"];
   const sizes = type === "Koker" ? Object.keys(kokerData) : type ? profielData[type] || [] : [];
   const filteredSizes = sizes.filter((item) =>
@@ -520,6 +522,7 @@ export default function App() {
     setPickbonNumber("");
     setLogic4OrderNumber("");
     setLogic4Message("");
+    setConfirmLineId(null);
   }
 
   function resetTool() {
@@ -814,6 +817,33 @@ export default function App() {
         line.id === lineId ? { ...line, processed: !line.processed } : line
       )
     );
+  }
+
+  function requestProcessLine(lineId) {
+    setConfirmLineId(lineId);
+  }
+
+  function confirmProcessLine() {
+    if (!confirmLineId) return;
+
+    setPickbonLines((currentLines) =>
+      currentLines.map((line) =>
+        line.id === confirmLineId
+          ? {
+              ...line,
+              processed: true,
+              scannedQuantity: line.scannedQuantity !== undefined ? line.quantity : line.scannedQuantity,
+              scannedAt: new Date().toLocaleString("nl-NL")
+            }
+          : line
+      )
+    );
+
+    setConfirmLineId(null);
+  }
+
+  function cancelProcessLine() {
+    setConfirmLineId(null);
   }
 
   function removePickbonLine(lineId) {
@@ -1140,6 +1170,26 @@ export default function App() {
         {scanError && <div style={styles.scanError}>{scanError}</div>}
         {searchError && <div style={styles.scanError}>{searchError}</div>}
 
+        {confirmLineId && (
+          <div style={styles.confirmOverlay}>
+            <div style={styles.confirmModal}>
+              <h2 style={styles.confirmTitle}>Controle artikel</h2>
+              <p style={styles.confirmText}>
+                Weet u zeker dat u het juiste artikel heeft?
+              </p>
+
+              <div style={styles.confirmActions}>
+                <button style={styles.confirmNoButton} onClick={cancelProcessLine}>
+                  Nee
+                </button>
+                <button style={styles.confirmYesButton} onClick={confirmProcessLine}>
+                  Ja
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
           <section style={styles.pickerHomePage} className="picker-home-responsive">
             <section style={styles.panel}>
@@ -1378,11 +1428,8 @@ export default function App() {
                   </div>
 
                   <div style={styles.pickbonActions}>
-                    <button style={styles.smallDarkButton} onClick={finishPickbon} disabled={pickbonLines.length === 0}>
-                      Alles verwerkt
-                    </button>
                     <button style={styles.smallOrangeButton} onClick={clearPickbon} disabled={pickbonLines.length === 0}>
-                      Leegmaken
+                      Pickbon leegmaken
                     </button>
                   </div>
                 </div>
@@ -1421,9 +1468,21 @@ export default function App() {
                             onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                           />
 
-                          <button style={styles.smallDarkButton} onClick={() => togglePickbonProcessed(line.id)}>
-                            {line.processed ? "Open" : "Verwerkt"}
-                          </button>
+                          {!line.processed && (
+                            <button style={styles.smallScanButton} onClick={startScanner}>
+                              Scan
+                            </button>
+                          )}
+
+                          {line.processed ? (
+                            <button style={styles.smallDoneButton} onClick={() => togglePickbonProcessed(line.id)}>
+                              ✓ Verwerkt
+                            </button>
+                          ) : (
+                            <button style={styles.smallDarkButton} onClick={() => requestProcessLine(line.id)}>
+                              Verwerken
+                            </button>
+                          )}
 
                           <button style={styles.smallDangerButton} onClick={() => removePickbonLine(line.id)}>
                             Verwijder
@@ -1435,29 +1494,6 @@ export default function App() {
                 )}
               </div>
 
-              <div style={styles.scanUnderPickbonPanel}>
-                <p style={styles.label}>Artikel barcode scannen</p>
-                <h2 style={styles.scanUnderPickbonTitle}>Scan artikelen voor deze pickbon</h2>
-
-                <form onSubmit={handleManualSearch}>
-                  <label style={styles.inputLabel}>Artikelcode of barcode</label>
-                  <input
-                    style={styles.lengthInput}
-                    value={manualCode}
-                    onChange={(e) => setManualCode(e.target.value)}
-                    placeholder="Bijv. 24010110096300092"
-                    inputMode="numeric"
-                  />
-
-                  <button style={styles.primaryButton} type="submit">
-                    Handmatig toevoegen
-                  </button>
-                </form>
-
-                <button style={styles.secondaryButton} onClick={startScanner}>
-                  Artikel barcode scannen
-                </button>
-              </div>
             </section>
           </>
         ) : (
@@ -2790,5 +2826,78 @@ const styles = {
     color: "#1234aa",
     fontSize: 24,
     fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  smallDoneButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#16a34a",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
+  },
+  smallScanButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#1234aa",
+    color: "white",
+    padding: "10px 12px",
+    fontWeight: 900,
+    cursor: "pointer"
+  },
+  confirmOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15,23,42,0.52)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    padding: 16
+  },
+  confirmModal: {
+    width: "100%",
+    maxWidth: 420,
+    background: "white",
+    borderRadius: 18,
+    padding: 22,
+    boxShadow: "0 20px 60px rgba(0,0,0,0.30)"
+  },
+  confirmTitle: {
+    margin: 0,
+    color: "#1234aa",
+    fontSize: 26,
+    fontFamily: "'Oswald', Arial Black, Impact, sans-serif"
+  },
+  confirmText: {
+    color: "#334155",
+    fontSize: 18,
+    lineHeight: 1.4,
+    margin: "14px 0 20px"
+  },
+  confirmActions: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: 10
+  },
+  confirmNoButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#e2e8f0",
+    color: "#0f172a",
+    padding: "14px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
+  confirmYesButton: {
+    border: "none",
+    borderRadius: 12,
+    background: "#16a34a",
+    color: "white",
+    padding: "14px 16px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
   },
 };
