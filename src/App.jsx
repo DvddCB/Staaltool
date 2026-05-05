@@ -852,15 +852,14 @@ export default function App() {
         const maxQuantity = Number(line.originalQuantity || line.quantity || 1);
         const value = Math.max(1, Number(nextQuantity) || 1);
         const safeQuantity = Math.min(value, maxQuantity);
+        const scannedQuantity = Number(line.scannedQuantity || 0);
 
         return {
           ...line,
           quantity: safeQuantity,
-          processed: Number(line.scannedQuantity || 0) >= safeQuantity
+          processed: scannedQuantity >= safeQuantity
         };
       })
-    );
-  })
     );
   }
 
@@ -1638,23 +1637,7 @@ export default function App() {
                               min="1"
                               max={line.originalQuantity || line.quantity}
                               value={line.quantity}
-                              onChange={(e) => {
-                                const value = Math.max(1, Number(e.target.value) || 1);
-                                const maxQuantity = Number(line.originalQuantity || line.quantity || 1);
-                                const safeValue = Math.min(value, maxQuantity);
-
-                                setPickbonLines((currentLines) =>
-                                  currentLines.map((currentLine) =>
-                                    currentLine.id === line.id
-                                      ? {
-                                          ...currentLine,
-                                          quantity: safeValue,
-                                          processed: Number(currentLine.scannedQuantity || 0) >= safeValue
-                                        }
-                                      : currentLine
-                                  )
-                                );
-                              }}
+                              onChange={(e) => updatePickbonQuantity(line.id, e.target.value)}
                             />
                           </div>
 
