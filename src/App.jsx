@@ -1738,30 +1738,55 @@ export default function App() {
             width: 100% !important;
           }
 
-          .picker-home-responsive > section {
+          .picker-home-responsive,
+          .picker-home-responsive > section,
+          .agendaPanel {
+            width: 100% !important;
             min-width: 0 !important;
+          }
+
+          .picker-home-responsive {
+            display: flex !important;
+            flex-direction: column !important;
           }
 
           .mobile-agenda-panel {
             border-radius: 14px !important;
+            padding: 12px !important;
           }
 
-          .mobile-agenda-panel > div:first-child {
+          .mobile-agenda-panel > div:first-child,
+          .pickerPanelHeader,
+          header {
             flex-direction: column !important;
             align-items: stretch !important;
           }
 
-          .mobile-agenda-panel input {
+          .mobile-agenda-panel input,
+          input {
             width: 100% !important;
             max-width: none !important;
+            box-sizing: border-box !important;
+          }
+
+          button,
+          label[style] {
+            min-height: 44px !important;
           }
 
           .calendar-grid-responsive {
+            display: flex !important;
+            overflow-x: auto !important;
             gap: 8px !important;
+            padding-bottom: 8px !important;
+            scroll-snap-type: x mandatory !important;
           }
 
           .calendar-grid-responsive > div {
-            min-height: 78px !important;
+            min-width: 150px !important;
+            min-height: 120px !important;
+            scroll-snap-align: start !important;
+            flex: 0 0 150px !important;
           }
 
           .calendar-grid-responsive strong {
@@ -1791,16 +1816,45 @@ export default function App() {
             line-height: 1.35 !important;
           }
 
+          .selectedOrderButtons,
+          .selected-order-responsive > div:last-child {
+            display: grid !important;
+            grid-template-columns: 1fr !important;
+            width: 100% !important;
+          }
+
           .pickbon-line-responsive {
             align-items: stretch !important;
+            flex-direction: column !important;
           }
 
           .pickbon-controls-responsive {
             grid-template-columns: 1fr !important;
+            width: 100% !important;
           }
 
           video {
             max-height: 260px !important;
+          }
+
+          .pdfUploadPanel {
+            grid-template-columns: 1fr !important;
+          }
+
+          .pdfUploadPanel label,
+          .pdfUploadPanel button {
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          .orderCardTop,
+          .orderMeta {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+          }
+
+          .orderMeta {
+            gap: 5px !important;
           }
 
           input,
@@ -1890,7 +1944,7 @@ export default function App() {
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
           <section style={styles.pickerHomePage} className="picker-home-responsive">
             <section style={styles.panel}>
-              <div style={styles.pickerPanelHeader}>
+              <div style={styles.pickerPanelHeader} className="pickerPanelHeader">
                 <div>
                   <p style={styles.label}>Artikel Picker</p>
                   <h2 style={styles.sectionTitle}>Orders verwerken</h2>
@@ -1914,7 +1968,7 @@ export default function App() {
                 />
               </div>
 
-              {canUploadPdf && <div style={styles.pdfUploadPanel}>
+              {canUploadPdf && <div style={styles.pdfUploadPanel} className="pdfUploadPanel">
                 <div>
                   <p style={styles.label}>PDF pickbon</p>
                   <h3 style={styles.pdfUploadTitle}>Pickbon uploaden</h3>
@@ -1971,7 +2025,7 @@ export default function App() {
                       onClick={() => setSelectedPickerOrder(order)}
                       onDoubleClick={() => openPickerOrder(order)}
                     >
-                      <div style={styles.orderCardTop}>
+                      <div style={styles.orderCardTop} className="orderCardTop">
                         <div>
                           <p style={styles.orderNumber}>{order.id}</p>
                           <p style={styles.orderCustomer}>{order.klant}</p>
@@ -1981,7 +2035,7 @@ export default function App() {
                         </span>
                       </div>
 
-                      <div style={styles.orderMeta}>
+                      <div style={styles.orderMeta} className="orderMeta">
                         <span>{formatDutchDate(getOrderDate(order))}</span>
                         <span>{order.tijd}</span>
                         <span style={styles.orderProgressText}>
@@ -2030,7 +2084,7 @@ export default function App() {
 
             <section style={styles.agendaPanel}>
               <section style={styles.panel} className="mobile-agenda-panel">
-                <div style={styles.pickerPanelHeader}>
+                <div style={styles.pickerPanelHeader} className="pickerPanelHeader">
                   <div>
                     <p style={styles.label}>Planning</p>
                     <h2 style={styles.sectionTitle}>Visuele agenda</h2>
@@ -2108,7 +2162,7 @@ export default function App() {
                     </p>
                   </div>
 
-                  <div style={styles.selectedOrderButtons}>
+                  <div style={styles.selectedOrderButtons} className="selectedOrderButtons">
                     <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>Pickbon openen</button>
                     {canRemoveOrders && (
                       <button style={canRemoveOrders ? styles.removeSelectedOrderButton : { ...styles.removeSelectedOrderButton, display: "none" }} onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}>Uit lijst halen</button>
@@ -2551,6 +2605,7 @@ const styles = {
     flexWrap: "wrap"
   },
   menuButtonSmall: {
+    minHeight: 44,
     border: "none",
     borderRadius: 12,
     background: "#0f172a",
@@ -2560,6 +2615,7 @@ const styles = {
     cursor: "pointer"
   },
   scanButton: {
+    minHeight: 44,
     border: "none",
     borderRadius: 12,
     background: "#1234aa",
@@ -2569,6 +2625,7 @@ const styles = {
     cursor: "pointer"
   },
   logoutButton: {
+    minHeight: 44,
     border: "none",
     borderRadius: 12,
     background: "#ff7a00",
@@ -3047,6 +3104,7 @@ const styles = {
   calendarOrder: {
     width: "100%",
     minHeight: 48,
+    minHeight: 48,
     border: "none",
     borderRadius: 12,
     color: "white",
@@ -3298,6 +3356,7 @@ const styles = {
     marginTop: 8
   },
   openPickbonButton: {
+    minHeight: 48,
     border: "none",
     borderRadius: 14,
     background: "#ff7a00",
@@ -3507,6 +3566,7 @@ const styles = {
     fontWeight: 700
   },
   pdfUploadButton: {
+    minHeight: 48,
     border: "none",
     borderRadius: 12,
     background: "#1234aa",
