@@ -768,6 +768,7 @@ export default function App() {
   });
   const [pdfUploadMessage, setPdfUploadMessage] = useState("");
   const [confirmOrderAction, setConfirmOrderAction] = useState(null);
+  const [confirmRemoveOrderId, setConfirmRemoveOrderId] = useState(null);
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -1338,6 +1339,36 @@ export default function App() {
     setConfirmOrderAction(null);
   }
 
+  function requestRemoveOrder(orderId) {
+    setConfirmRemoveOrderId(orderId);
+  }
+
+  function confirmRemoveOrder() {
+    if (!confirmRemoveOrderId) return;
+
+    setUploadedPdfOrders((currentOrders) =>
+      currentOrders.filter((order) => order.id !== confirmRemoveOrderId)
+    );
+
+    setProcessedOrderIds((currentIds) =>
+      currentIds.filter((orderId) => orderId !== confirmRemoveOrderId)
+    );
+
+    if (selectedPickerOrder?.id === confirmRemoveOrderId) {
+      const remainingOrders = effectivePickerOrders.filter((order) => order.id !== confirmRemoveOrderId);
+      setSelectedPickerOrder(remainingOrders[0] || null);
+      setPickerView("home");
+      setPickbonLines([]);
+      setPickbonNumber("");
+    }
+
+    setConfirmRemoveOrderId(null);
+  }
+
+  function cancelRemoveOrder() {
+    setConfirmRemoveOrderId(null);
+  }
+
   function removePickbonLine(lineId) {
     setPickbonLines((currentLines) => currentLines.filter((line) => line.id !== lineId));
   }
@@ -1725,6 +1756,26 @@ export default function App() {
           </div>
         )}
 
+        {confirmRemoveOrderId && (
+          <div style={styles.confirmOverlay}>
+            <div style={styles.confirmModal}>
+              <h2 style={styles.confirmTitle}>Order uit lijst halen</h2>
+              <p style={styles.confirmText}>
+                Weet u zeker dat u deze order uit het overzicht wilt halen?
+              </p>
+
+              <div style={styles.confirmActions}>
+                <button style={styles.confirmNoButton} onClick={cancelRemoveOrder}>
+                  Nee
+                </button>
+                <button style={styles.confirmYesButton} onClick={confirmRemoveOrder}>
+                  Ja
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedModule === "Artikelzoeker" && pickerView === "home" ? (
           <section style={styles.pickerHomePage} className="picker-home-responsive">
             <section style={styles.panel}>
@@ -1816,6 +1867,19 @@ export default function App() {
                               : 0}%`
                           }}
                         />
+                      </div>
+
+                      <div style={styles.orderCardActions}>
+                        <button
+                          type="button"
+                          style={styles.removeOrderButton}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            requestRemoveOrder(order.id);
+                          }}
+                        >
+                          Uit lijst halen
+                        </button>
                       </div>
                     </button>
                   ))}
@@ -1949,9 +2013,17 @@ export default function App() {
                     </p>
                   </div>
 
-                  <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>
-                    Pickbon openen
-                  </button>
+                  <div style={styles.selectedOrderButtons}>
+                    <button style={styles.openPickbonButton} onClick={() => openPickerOrder(currentSelectedPickerOrder)}>
+                      Pickbon openen
+                    </button>
+                    <button
+                      style={styles.removeSelectedOrderButton}
+                      onClick={() => requestRemoveOrder(currentSelectedPickerOrder?.id)}
+                    >
+                      Uit lijst halen
+                    </button>
+                  </div>
                 </div>
               </section>
             </section>
@@ -3523,5 +3595,35 @@ const styles = {
     borderRadius: 12,
     padding: 10,
     fontWeight: 800
-  }
+  },
+  orderCardActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    marginTop: 10
+  },
+  removeOrderButton: {
+    border: "none",
+    borderRadius: 10,
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "8px 10px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 12
+  },
+  selectedOrderButtons: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap"
+  },
+  removeSelectedOrderButton: {
+    border: "none",
+    borderRadius: 14,
+    background: "#fee2e2",
+    color: "#991b1b",
+    padding: "14px 18px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 16
+  },
 };
