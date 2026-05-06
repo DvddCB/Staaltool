@@ -1,0 +1,14 @@
+Stap 1 - Vercel 404 fix voor Supabase Auth
+
+Wat doet dit?
+- Dit bestand zorgt dat Vercel alle routes terugstuurt naar je React app.
+- Daardoor geven Supabase login/reset links geen 404 Page Not Found meer.
+
+Gebruik:
+1. Pak deze ZIP uit.
+2. Upload vercel.json in GitHub in de HOOFDMAP van je project.
+   Dus NIET in src.
+   Dus op hetzelfde niveau als package.json.
+3. Klik Commit changes.
+4. Wacht tot Vercel Ready.
+5. Ga daarna naar Supabase Authentication URL Configuration.
