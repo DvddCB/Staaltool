@@ -1,0 +1,28 @@
+LEESMIJ - GITHUB WEB FIX
+
+Je werkt via GitHub web. Daarom werkt een .bat of script NIET automatisch.
+Je moet src/App.jsx handmatig aanpassen met de snippets uit APP-JSX-WEB-FIX-SNIPPETS.js.
+
+Snelste manier:
+
+1. Open GitHub
+2. Ga naar src/App.jsx
+3. Klik op het potloodje Edit
+4. Open APP-JSX-WEB-FIX-SNIPPETS.js uit deze ZIP
+5. Voer de 12 vervangingen exact uit
+6. Klik Commit changes
+7. Wacht tot Vercel Ready is
+
+Deze fix zorgt voor:
+- Datum zichtbaar en wijzigbaar op eerste pagina/orderkaart
+- Datum wijzigbaar op pickbon
+- Klantnaam zichtbaar bovenaan pickbon
+- Artikelnaam zichtbaar op pickbon
+- Fallbacks voor watcher velden:
+  articleCode / artikelcode
+  description / artikel
+  quantity / aantal
+
+BELANGRIJK:
+Upload APP-JSX-WEB-FIX-SNIPPETS.js NIET als src/App.jsx.
+Het is een handleiding/snippetbestand.
