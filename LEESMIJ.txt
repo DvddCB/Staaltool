@@ -1,0 +1,10 @@
+V8
+
+Aanpassing:
+- Scan barcode NIET meer in de bovenbalk
+- Scan barcode WEL zichtbaar op artikelniveau bij de artikelregel
+- Verder alles gelijk aan V7
+
+Gebruik:
+Vervang src/App.jsx volledig door deze App.jsx.
+Commit changes en wacht op Vercel Ready.
