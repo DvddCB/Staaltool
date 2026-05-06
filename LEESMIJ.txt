@@ -1,8 +1,0 @@
-V5 wijzigingen
-
-- knop 'Scan barcode' verwijderd
-- artikelnaam en artikelcode nu beide dik blauw
-- rustiger pickbon layout
-
-Vervang src/App.jsx volledig.
-Daarna commit changes en wacht op Vercel Ready.
