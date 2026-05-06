@@ -1,0 +1,12 @@
+V14 - Schone verwerken-popup
+
+Aanpassing:
+- Popup komt zodra alles gepickt is.
+- Popup zegt NIET meer dat alles verwerkt is.
+- Popup toont alleen 'Pickbon verwerken' en knoppen Annuleren / Verwerken.
+- Je moet zelf op Verwerken klikken.
+- Daarna wordt de pickbon verwerkt en ga je direct terug naar de agenda/planning.
+
+Gebruik:
+Vervang src/App.jsx volledig.
+Commit changes en wacht tot Vercel Ready.
