@@ -1,0 +1,11 @@
+App V18 - Memo tonen op pickbon
+
+Nieuw:
+- Als een order memo heeft, verschijnt naast het ordernummer een badge: Let op memo.
+- De memo wordt onderaan de pickbon getoond in een oranje blok.
+- Werkt samen met Watcher V26 die memo opslaat bij de order.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht tot Vercel Ready.
