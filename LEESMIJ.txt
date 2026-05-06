@@ -1,0 +1,8 @@
+V6 wijzigingen
+
+- bovenste knop 'Scan barcode' verwijderd naast menu/uitloggen
+- overige styling uit V5 behouden
+
+Gebruik:
+Vervang src/App.jsx volledig door deze versie.
+Daarna committen en wachten op Vercel Ready.
