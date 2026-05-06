@@ -1,0 +1,19 @@
+APP.JSX FIX
+
+Gebruik:
+1. Pak deze ZIP uit in de hoofdmap van je project.
+   Dus in dezelfde map waar package.json staat.
+2. Dubbelklik FIX-APP.bat.
+3. Hij maakt automatisch een backup in src/App.backup-....jsx.
+4. Daarna past hij src/App.jsx aan.
+5. Upload/commit naar GitHub.
+6. Vercel deployt opnieuw.
+
+Deze fix doet:
+- datum aanpassen zichtbaar voor beheerder
+- klantnaam zichtbaar in pickbon
+- artikelomschrijving zichtbaar
+- fallback voor velden:
+  row.description / row.artikel
+  row.articleCode / row.artikelcode
+  row.quantity / row.aantal
