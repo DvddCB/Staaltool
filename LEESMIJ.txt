@@ -1,0 +1,14 @@
+V16 - Inline Pickbon verwerken
+
+Aanpassingen:
+- 'Pickbon verwerken' verschijnt naast ordernummer/klant bovenin de pickbon.
+- Geen grote scherm-popup meer.
+- Knoppen: Nee en Verwerken.
+- Bij Nee blijft de melding/pickbon gewoon staan.
+- Bij Verwerken wordt de order definitief Gereed en ga je terug naar planning/agenda.
+- Als een artikelregel al gepickt/verwerkt is, verdwijnen de knoppen Verwerkt en Verwijder.
+- Aanpassen blijft mogelijk zolang de pickbon nog niet definitief verwerkt is.
+
+Gebruik:
+Vervang src/App.jsx volledig.
+Commit changes en wacht op Vercel Ready.
