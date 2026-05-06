@@ -1,0 +1,12 @@
+App V17 - Alleen knop Verwerken
+
+Aanpassing:
+- Bij 'Pickbon verwerken' staat alleen nog de knop 'Verwerken'.
+- De knop 'Nee' is verwijderd.
+- 'Pickbon verwerken' verschijnt nog steeds pas nadat alles gepickt is.
+- Na klikken op Verwerken gaat de order naar Gereed en ga je terug naar planning.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht tot Vercel Ready.
