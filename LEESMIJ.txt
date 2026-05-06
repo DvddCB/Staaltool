@@ -1,12 +1,14 @@
-V14 - Schone verwerken-popup
+V15 - Pas Gereed na popup Verwerken
 
-Aanpassing:
-- Popup komt zodra alles gepickt is.
-- Popup zegt NIET meer dat alles verwerkt is.
-- Popup toont alleen 'Pickbon verwerken' en knoppen Annuleren / Verwerken.
-- Je moet zelf op Verwerken klikken.
-- Daarna wordt de pickbon verwerkt en ga je direct terug naar de agenda/planning.
+Belangrijk:
+- Artikel picken tot 1/1 zet de order NIET meer op Gereed.
+- De groene 'Order verwerkt' balk verschijnt niet meer meteen.
+- Als alles gepickt is, verschijnt de popup 'Pickbon verwerken'.
+- Pas als gebruiker zelf op 'Verwerken' klikt:
+  - orderstatus wordt Gereed in Supabase
+  - pickbon sluit
+  - gebruiker gaat terug naar planning/agenda
 
 Gebruik:
 Vervang src/App.jsx volledig.
-Commit changes en wacht tot Vercel Ready.
+Commit changes en wacht op Vercel Ready.
