@@ -1,0 +1,12 @@
+App V20 - Memo alleen op pickbon
+
+Aanpassing:
+- Memo staat niet meer onder het orderoverzicht.
+- Memo wordt alleen getoond als je de desbetreffende pickbon opent.
+- Memo staat onderaan de pickbon, onder de artikelregels.
+- Badge 'Let op memo' blijft boven naast het ordernummer zichtbaar.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht tot Vercel Ready.
