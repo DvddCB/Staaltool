@@ -1,0 +1,16 @@
+Package fix V2
+
+Deze package.json bevat nu:
+- @supabase/supabase-js
+- @zxing/browser
+- jsbarcode
+- react
+- vite
+
+Gebruik:
+1. Vervang package.json in de hoofdmap van GitHub.
+2. Upload/commit via GitHub website.
+3. Wacht op Vercel Ready.
+
+Lokaal mag je daarna eventueel ook draaien:
+npm install
