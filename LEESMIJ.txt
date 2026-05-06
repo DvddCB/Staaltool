@@ -1,0 +1,12 @@
+App Auth V2 - Geen laadscherm-hang
+
+Fix:
+- 'Authenticatie laden...' blijft niet meer hangen.
+- Als er geen sessie is, toont de app direct het login-scherm.
+- Login via Supabase Auth blijft actief.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht tot Vercel Ready.
+4. Log in met je Supabase e-mail en wachtwoord.
