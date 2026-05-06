@@ -1,0 +1,17 @@
+V12 - Definitieve pickflow
+
+Aanpassingen:
+- Bovenaan geen melding 'Scan of verwerk eerst alle artikelregels' meer.
+- Popup 'Pickbon verwerken' verschijnt pas als alle regels gepickt zijn.
+- In de popup staat knop 'Verwerken'.
+- Na verwerken sluit de pickbon en ga je direct terug naar planning.
+- Artikelregel knoppen:
+  Aantal
+  Scan
+  Artikel picken
+  Verwijder
+- Geen automatische groene refresh/flikker uit V11 blijft behouden.
+
+Gebruik:
+Vervang src/App.jsx volledig door deze App.jsx.
+Commit changes en wacht op Vercel Ready.
