@@ -1,0 +1,23 @@
+App Auth V1
+
+Nieuw:
+- Login via Supabase Authentication
+- Rollen via profiles tabel
+- Admin / worker ondersteuning
+- Sessies blijven ingelogd
+- Uitloggen via Supabase
+
+BELANGRIJK:
+Voer eerst uit in terminal:
+
+npm install @supabase/supabase-js
+
+Daarna:
+- vervang src/App.jsx
+- commit changes
+- wacht op Vercel Ready
+
+Login:
+gebruik je Supabase gebruiker:
+voorbeeld:
+beheerder@circulaire-bouwmaterialen.nl
