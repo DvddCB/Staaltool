@@ -1,0 +1,14 @@
+App.jsx V4 styling
+
+Aanpassingen:
+- klantnaam in orderkaart dezelfde stijl als ordernummer
+- klantnaam op pickbon dezelfde stijl als ordernummer
+- artikelnaam op pickbon als kleurblok volgens kleurcode
+- artikelnummer daaronder groot zichtbaar
+- 'verwerkt' / 'nog te verwerken' tekst weggehaald
+- alleen 0/1 gepickt of 1/1 gepickt blijft zichtbaar
+- groene actieve kaart minder fel zodat hij niet lijkt te knipperen
+
+Gebruik:
+Vervang GitHub src/App.jsx volledig door deze App.jsx.
+Commit changes en wacht tot Vercel Ready.
