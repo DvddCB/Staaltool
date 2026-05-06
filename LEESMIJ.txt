@@ -1,19 +1,25 @@
-APP.JSX FIX
+APP.JSX CORRECTIE
 
-Gebruik:
-1. Pak deze ZIP uit in de hoofdmap van je project.
-   Dus in dezelfde map waar package.json staat.
-2. Dubbelklik FIX-APP.bat.
-3. Hij maakt automatisch een backup in src/App.backup-....jsx.
-4. Daarna past hij src/App.jsx aan.
-5. Upload/commit naar GitHub.
-6. Vercel deployt opnieuw.
+BELANGRIJK:
+Deze ZIP moet je NIET in src zetten.
 
-Deze fix doet:
+Zet deze bestanden in de hoofdmap van je project, naast package.json:
+- fix-app.jsx.js
+- FIX-APP.bat
+- LEESMIJ.txt
+
+Daarna:
+1. Dubbelklik FIX-APP.bat
+2. Hij past automatisch src/App.jsx aan
+3. Hij maakt eerst een backup in src/App.backup-....jsx
+4. Upload/commit daarna src/App.jsx naar GitHub
+5. Vercel deployt opnieuw
+
+Deze correctie zorgt voor:
 - datum aanpassen zichtbaar voor beheerder
-- klantnaam zichtbaar in pickbon
+- klantnaam zichtbaar bovenaan pickbon
 - artikelomschrijving zichtbaar
-- fallback voor velden:
-  row.description / row.artikel
-  row.articleCode / row.artikelcode
-  row.quantity / row.aantal
+- velden uit watcher worden correct gelezen:
+  articleCode/artikelcode
+  description/artikel
+  quantity/aantal

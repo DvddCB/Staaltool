@@ -1,4 +1,4 @@
 @echo off
-title App.jsx Fix - Datum Naam Artikel
+title App.jsx Correctie
 node fix-app.jsx.js
 pause
