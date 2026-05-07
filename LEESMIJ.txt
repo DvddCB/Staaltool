@@ -1,0 +1,14 @@
+App Auth V3 DEBUG LOGIN
+
+Deze versie toont de echte Supabase foutmelding op het login-scherm.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes via GitHub.
+3. Wacht op Vercel Ready.
+4. Probeer in te loggen.
+5. Stuur exact de foutmelding die onder de login-knop verschijnt.
+
+Let op:
+- Login met volledig e-mailadres, bijvoorbeeld daan@arnovddungen.nl
+- Niet met alleen gebruikersnaam.
