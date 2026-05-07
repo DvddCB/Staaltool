@@ -1,0 +1,16 @@
+App Auth V4 - Supabase direct in code
+
+Waarom:
+- Failed to fetch bleef terugkomen.
+- Deze versie gebruikt geen Vercel Environment Variables voor Supabase.
+- De juiste Supabase URL en anon key staan direct in App.jsx.
+- Zo testen we of Vercel ENV de oorzaak was.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Doe Ctrl + Shift + R op de tool.
+5. Login opnieuw testen.
+
+Als er nog een fout komt, staat er nu ook bij welk Supabase project gebruikt wordt.
