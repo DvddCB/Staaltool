@@ -1,19 +1,19 @@
-Receptie Role Debug Fix
+ROLE FINAL FIX
 
 Deze versie:
-- normaliseert role uit Supabase
-- gebruikt role uit userRole of localStorage
-- toont tijdelijk bovenin: Rol debug: ...
-- als daar 'receptie' staat, moet header ook Receptie tonen
-- PDF-knoppen worden getoond voor admin/receptie
+- leest role correct uit Supabase
+- ondersteunt:
+  - admin
+  - receptie
+  - worker
+- toont nu correct:
+  - Beheerder
+  - Receptie
+  - Gebruiker
 
-Belangrijk:
-Als 'Rol debug' nog worker/gebruiker toont, dan staat profiles.id niet gelijk aan de UID van deze Supabase user.
-
-Gebruik:
-1. Vervang src/App.jsx
-2. Commit changes
-3. Wacht op Vercel Ready
+Installatie:
+1. vervang src/App.jsx
+2. commit changes
+3. wacht op Vercel Ready
 4. Ctrl + F5
-5. Log opnieuw in
-6. Kijk wat er bij 'Rol debug' staat
+5. opnieuw inloggen
