@@ -1,0 +1,12 @@
+Herstel App.jsx
+
+Deze versie zet de app terug naar de laatst door jou geüploade werkende App.jsx,
+dus vóór de receptie/PDF-aanpassing.
+
+Gebruik:
+1. Vervang src/App.jsx hiermee.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Controleer of de tool weer opent.
+
+Daarna bouwen we de receptie/PDF-functie opnieuw gecontroleerd in.
