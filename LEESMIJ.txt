@@ -1,0 +1,13 @@
+Herstel Supabase Auth App
+
+Deze versie zet de app terug naar de Supabase Auth-login,
+zonder de receptie/PDF-aanpassing die de app brak.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Ctrl + F5.
+5. Log in met Supabase e-mail + wachtwoord.
+
+Daarna bouwen we receptie/PDF opnieuw gecontroleerd in.
