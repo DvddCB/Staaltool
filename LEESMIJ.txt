@@ -1,0 +1,13 @@
+App Auth V9 - Layout fix
+
+Fix:
+- Wachtwoord vergeten? staat nu netjes gecentreerd.
+- Geen browser standaard-knop meer zichtbaar.
+- Mooie spacing onder Inloggen.
+- Zelfde stijl als mockup.
+
+Gebruik:
+1. Vervang src/App.jsx
+2. Commit changes
+3. Wacht op Vercel Ready
+4. Ctrl + Shift + R
