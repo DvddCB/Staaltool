@@ -1,0 +1,14 @@
+App Auth V7 - Recovery code fix
+
+Fix:
+- Supabase reset-links met ?code=... worden nu ondersteund.
+- De app wisselt de code om voor een tijdelijke sessie.
+- Daarna opent direct het scherm 'Nieuw wachtwoord'.
+- Daarna kan updateUser het wachtwoord opslaan.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Stuur een NIEUWE herstelmail.
+5. Klik op de nieuwste link.
