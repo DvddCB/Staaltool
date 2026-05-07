@@ -1,0 +1,14 @@
+RECEPTIE LABEL NO WHITE SCREEN
+
+Fix:
+- Receptie label wordt inline berekend.
+- Er wordt geen aparte isReception variabele meer vereist in de render.
+- Daardoor geen wit scherm meer door undefined variabele.
+- Login/auth/orderlogica blijft ongemoeid.
+
+Gebruik:
+1. Vervang src/App.jsx
+2. Commit changes
+3. Wacht op Vercel Ready
+4. Ctrl + F5
+5. Log opnieuw in als receptie
