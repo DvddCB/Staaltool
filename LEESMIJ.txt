@@ -1,0 +1,19 @@
+APP ROLE SUPABASE SYNC FIX
+
+Echte fix:
+- app haalt bij opstarten opnieuw de rol uit Supabase session + profiles
+- logout meldt ook af bij Supabase
+- localStorage kan receptie niet meer blijven overschrijven
+- header toont tijdelijk ook: Rol: receptie/admin/worker
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Ctrl + Shift + R.
+5. Log uit.
+6. Log opnieuw in als receptie.
+
+Als bovenin staat:
+Rol: receptie
+dan is de koppeling goed.
