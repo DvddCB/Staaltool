@@ -1,0 +1,12 @@
+App Auth V10 - Wachtwoord vergeten harde layout fix
+
+Fix:
+- De knop 'Wachtwoord vergeten?' heeft nu inline styling.
+- Daardoor kan hij niet meer als standaard browser-knop verschijnen.
+- Staat netjes gecentreerd onder Inloggen.
+
+Gebruik:
+1. Vervang src/App.jsx volledig.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Open de tool met Ctrl + F5 of Ctrl + Shift + R.
