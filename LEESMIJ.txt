@@ -1,0 +1,21 @@
+APP FULL ROLE SAVE FIX
+
+Volledige App.jsx om direct te vervangen.
+
+Aanpassing:
+- Supabase role wordt niet meer opgeslagen als oude/vaste gebruiker.
+- role wordt genormaliseerd:
+  admin
+  receptie
+  worker
+- Header kan Receptie tonen.
+
+Gebruik:
+1. Vervang src/App.jsx volledig met deze App.jsx.
+2. Commit changes.
+3. Wacht op Vercel Ready.
+4. Ctrl + F5.
+5. Log opnieuw in met receptie.
+
+Let op:
+Deze versie raakt de login-flow verder niet aan.
