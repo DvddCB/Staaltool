@@ -1,10 +1,11 @@
-APP ROLE SUPABASE SYNC FIX
+APP ROLE DEEP FIX V2
 
-Echte fix:
-- app haalt bij opstarten opnieuw de rol uit Supabase session + profiles
+Diepe fix:
+- rol wordt bij login opgehaald uit Supabase profiles
+- rol wordt bij app-start opnieuw opgehaald uit actieve Supabase sessie
 - logout meldt ook af bij Supabase
-- localStorage kan receptie niet meer blijven overschrijven
-- header toont tijdelijk ook: Rol: receptie/admin/worker
+- header toont tijdelijk: Rol: admin/receptie/worker
+- localStorage kan de oude rol niet meer vasthouden
 
 Gebruik:
 1. Vervang src/App.jsx volledig.
@@ -14,6 +15,6 @@ Gebruik:
 5. Log uit.
 6. Log opnieuw in als receptie.
 
-Als bovenin staat:
-Rol: receptie
-dan is de koppeling goed.
+Controle:
+Bovenin moet staan:
+Receptie · Rol: receptie
