@@ -1,0 +1,13 @@
+RECEPTIE WHITE SCREEN TEXT FIX
+
+Fix:
+- De melding onder Orders verwerken is nu veilige JSX.
+- Dit voorkomt wit scherm bij receptie-login.
+- Beheerder/receptie/gebruiker tekst blijft dynamisch.
+
+Gebruik:
+1. Vervang src/App.jsx
+2. Commit changes
+3. Wacht op Vercel Ready
+4. Ctrl + Shift + R
+5. Log opnieuw in als receptie
